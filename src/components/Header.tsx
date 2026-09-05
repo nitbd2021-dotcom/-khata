@@ -45,37 +45,42 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20 gap-2">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-14 sm:h-16 md:h-20 gap-1.5 sm:gap-2">
           
           {/* Brand Logo & Shop Name */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xl shadow-md shadow-emerald-200">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-base sm:text-lg shadow-sm shadow-emerald-200 shrink-0">
               খ+
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-tight">
-                  খাতা+ <span className="text-xs font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Google Drive & Sheets</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h1 className="text-base sm:text-xl font-bold text-slate-900 tracking-tight leading-tight">
+                  খাতা+
                 </h1>
+                <span className="hidden md:inline text-xs font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Google Drive & Sheets
+                </span>
                 {isAdmin && (
-                  <span className="inline-flex items-center gap-1 text-[11px] bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md font-bold" title="সুপার এডমিন একাউন্ট">
-                    <Shield className="w-3 h-3 text-amber-700" /> সুপার এডমিন
+                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md font-bold shrink-0" title="সুপার এডমিন একাউন্ট">
+                    <Shield className="w-3 h-3 text-amber-700" />
+                    <span className="hidden xs:inline">সুপার এডমিন</span>
                   </span>
                 )}
                 {isMod && !isAdmin && (
-                  <span className="inline-flex items-center gap-1 text-[11px] bg-teal-100 text-teal-900 border border-teal-300 px-2 py-0.5 rounded-md font-bold" title="মডারেটর একাউন্ট">
-                    <ShieldCheck className="w-3 h-3 text-teal-700" /> মডারেটর
+                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] bg-teal-100 text-teal-900 border border-teal-300 px-1.5 py-0.5 rounded-md font-bold shrink-0" title="মডারেটর একাউন্ট">
+                    <ShieldCheck className="w-3 h-3 text-teal-700" />
+                    <span className="hidden xs:inline">মডারেটর</span>
                   </span>
                 )}
                 {isRemembered && (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium" title="এই ডিভাইসে একাউন্ট সংরক্ষিত আছে">
+                  <span className="hidden lg:inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium" title="এই ডিভাইসে একাউন্ট সংরক্ষিত আছে">
                     <Smartphone className="w-3 h-3 text-emerald-600" /> ডিভাইস সেভড
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 truncate max-w-[180px] sm:max-w-xs font-medium">
-                {user.shopName} • <span className="text-slate-400">{user.email}</span>
+              <p className="text-[11px] sm:text-xs text-slate-500 truncate max-w-[120px] xs:max-w-[170px] sm:max-w-xs font-medium">
+                {user.shopName} {user.email ? <span className="text-slate-400 hidden sm:inline">• {user.email}</span> : ''}
               </p>
             </div>
           </div>
@@ -160,14 +165,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenUserSheet}
-                  className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                  className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition cursor-pointer shrink-0 ${
                     !isOnline
                       ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
                       : pendingCount > 0
                       ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
                       : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
                   }`}
-                  title="ব্যবহারকারীর গুগল ড্রাইভের অটোমেটিক শিট ফাইল ও অফলাইন সিঙ্ক দেখুন"
+                  title="গুগল ড্রাইভ ও শিট সিঙ্ক ভিউয়ার"
                 >
                   {isSyncing ? (
                     <RefreshCw className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
@@ -177,15 +182,15 @@ export const Header: React.FC<HeaderProps> = ({
                     <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
                   )}
                   
-                  <span className="font-bold">
+                  <span className="font-bold text-[11px] sm:text-xs">
                     {!isOnline ? (
                       `অফলাইন (${pendingCount})`
                     ) : isSyncing ? (
-                      'সিঙ্ক হচ্ছে...'
+                      'সিঙ্ক...'
                     ) : pendingCount > 0 ? (
-                      `শিট (${pendingCount} অপেক্ষমান)`
+                      `শিট (${pendingCount})`
                     ) : (
-                      'গুগল শিট'
+                      <span className="hidden xs:inline">গুগল শিট</span>
                     )}
                   </span>
                 </button>
@@ -194,12 +199,12 @@ export const Header: React.FC<HeaderProps> = ({
                   href={user.googleSheetUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition"
-                  title="ব্যবহারকারীর গুগল ড্রাইভের অটোমেটিক শিট ফাইল ওপেন করুন"
+                  className="inline-flex items-center gap-1 sm:gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition shrink-0"
+                  title="গুগল শিট ওপেন করুন"
                 >
-                  <Cloud className="w-4 h-4 text-emerald-600" />
-                  <span className="hidden lg:inline">ড্রাইভ শিট</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-emerald-500" />
+                  <Cloud className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                  <span className="hidden md:inline">ড্রাইভ শিট</span>
+                  <ExternalLink className="w-3 h-3 text-emerald-500" />
                 </a>
               ) : null
             )}
@@ -208,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({
             {isAdmin && onToggleModeratorView && (
               <button
                 onClick={onToggleModeratorView}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition cursor-pointer shrink-0 ${
                   isModeratorView
                     ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
                     : 'bg-teal-50 text-teal-900 border-teal-200 hover:bg-teal-100'
@@ -216,7 +221,7 @@ export const Header: React.FC<HeaderProps> = ({
                 title="মডারেটর হিসেবে অধীনস্থ সকল ডিএসআর-এর মোট বাকি ও তথ্য দেখুন"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-                <span>{isModeratorView ? 'ডিএসআর খাতা' : 'মডারেটর পোর্টাল'}</span>
+                <span className="hidden xs:inline">{isModeratorView ? 'ডিএসআর খাতা' : 'মডারেটর'}</span>
               </button>
             )}
 
@@ -224,7 +229,7 @@ export const Header: React.FC<HeaderProps> = ({
             {isAdmin && (
               <button
                 onClick={onToggleAdminView}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition cursor-pointer shrink-0 ${
                   isAdminView
                     ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
                     : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
@@ -232,14 +237,14 @@ export const Header: React.FC<HeaderProps> = ({
                 title="এডমিন কেন্দ্রীয় শিট ও সকল ব্যবহারকারীর পিন/হিসাব দেখুন"
               >
                 <Shield className="w-3.5 h-3.5 text-amber-600" />
-                <span>{isAdminView ? 'খাতায় ফিরুন' : 'এডমিন শিট'}</span>
+                <span className="hidden xs:inline">{isAdminView ? 'খাতায় ফিরুন' : 'এডমিন'}</span>
               </button>
             )}
 
             {/* Settings & Logout */}
             <button
               onClick={onOpenSettings}
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer shrink-0 min-w-[34px] min-h-[34px] flex items-center justify-center"
               title="সেটিংস ও ড্রাইভ সিঙ্ক কনফিগারেশন"
             >
               <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -247,7 +252,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={onLogout}
-              className="p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 transition cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 transition cursor-pointer shrink-0 min-w-[34px] min-h-[34px] flex items-center justify-center"
               title="লগআউট"
             >
               <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />

@@ -174,10 +174,10 @@ export const CustomerList: React.FC<CustomerListProps> = ({
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
           {/* Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full py-0.5">
             <button
               onClick={() => setFilter('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
                 filter === 'all'
                   ? 'bg-slate-900 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -187,17 +187,17 @@ export const CustomerList: React.FC<CustomerListProps> = ({
             </button>
             <button
               onClick={() => setFilter('receivable')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
                 filter === 'receivable'
                   ? 'bg-red-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              বাকি পাওনা আছে
+              বাকি পাওনা
             </button>
             <button
               onClick={() => setFilter('exceeded')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 ${
                 filter === 'exceeded'
                   ? 'bg-red-600 text-white shadow-xs'
                   : exceededCount > 0
@@ -210,33 +210,33 @@ export const CustomerList: React.FC<CustomerListProps> = ({
             </button>
             <button
               onClick={() => setFilter('payable')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
                 filter === 'payable'
                   ? 'bg-purple-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              দেনা আছে
+              দেনা
             </button>
             <button
               onClick={() => setFilter('cleared')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
                 filter === 'cleared'
                   ? 'bg-emerald-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              পরিশোধিত (০)
+              পরিশোধিত
             </button>
           </div>
 
           {/* Sort Dropdown */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-xs text-slate-400 font-medium">সাজান:</span>
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as any)}
-              className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700"
+              className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700"
             >
               <option value="balance_desc">সর্বোচ্চ বকেয়া</option>
               <option value="name">নাম অনুযায়ী</option>

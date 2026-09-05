@@ -371,11 +371,11 @@ export default function App() {
   const pendingCount = transactions.filter(t => !t.syncedToSheet).length;
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col selection:bg-emerald-200 relative">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col selection:bg-emerald-200 relative overflow-x-hidden w-full max-w-full">
       
       {/* Dynamic Auto-Sync / Offline Notification Toast */}
       {syncNotification && (
-        <div className={`fixed top-4 right-4 left-4 sm:left-auto sm:max-w-md z-50 p-3.5 rounded-2xl shadow-xl border flex items-center justify-between gap-3 animate-in slide-in-from-top-4 duration-200 ${
+        <div className={`fixed top-3 right-3 left-3 sm:left-auto sm:right-4 sm:max-w-md z-50 p-3 sm:p-3.5 rounded-2xl shadow-xl border flex items-center justify-between gap-3 animate-in slide-in-from-top-4 duration-200 ${
           syncNotification.type === 'success'
             ? 'bg-emerald-900 text-white border-emerald-600 shadow-emerald-950/20'
             : syncNotification.type === 'warning'
@@ -432,7 +432,7 @@ export default function App() {
       )}
 
       {/* Main App Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-2.5 sm:px-6 lg:px-8 pt-3 sm:pt-6 pb-28 md:pb-12">
         {currentUser && (
           <>
             {isAdminView ? (
@@ -510,13 +510,13 @@ export default function App() {
 
       {/* Mobile Bottom Navigation Bar (Material 3 Touch Ergonomics) */}
       {currentUser && !isAdminView && !isModeratorView && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 md:hidden px-2 py-1 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 md:hidden px-1.5 pt-1.5 pb-safe shadow-lg">
           <div className="flex items-center justify-around">
             
             {/* Home Tab */}
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex flex-col items-center py-1.5 px-3 rounded-xl transition ${
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition min-w-[56px] ${
                 activeTab === 'dashboard'
                   ? 'text-emerald-700 font-bold'
                   : 'text-slate-500 font-medium'
@@ -529,7 +529,7 @@ export default function App() {
             {/* Customers Tab */}
             <button
               onClick={() => setActiveTab('customers')}
-              className={`flex flex-col items-center py-1.5 px-3 rounded-xl transition ${
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition min-w-[56px] ${
                 activeTab === 'customers'
                   ? 'text-emerald-700 font-bold'
                   : 'text-slate-500 font-medium'
@@ -542,10 +542,10 @@ export default function App() {
             {/* Prominent Center Add Button */}
             <button
               onClick={() => setIsPlusMenuOpen(prev => !prev)}
-              className={`flex flex-col items-center -mt-5 p-3 rounded-2xl shadow-lg transition-all duration-200 active:scale-95 cursor-pointer ${
+              className={`flex flex-col items-center -mt-6 p-3.5 rounded-2xl shadow-lg transition-all duration-200 active:scale-95 cursor-pointer min-w-[52px] min-h-[52px] justify-center ${
                 isPlusMenuOpen
                   ? 'bg-slate-900 text-white shadow-slate-400 rotate-45'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200 ring-4 ring-white'
               }`}
               title={isPlusMenuOpen ? 'বন্ধ করুন' : 'নতুন হিসাব বা QR স্ক্যান'}
             >
@@ -555,7 +555,7 @@ export default function App() {
             {/* Voice Khata Tab */}
             <button
               onClick={() => setIsVoiceKhataOpen(true)}
-              className="flex flex-col items-center py-1.5 px-3 rounded-xl text-slate-500 hover:text-emerald-700 transition"
+              className="flex flex-col items-center py-1 px-2.5 rounded-xl text-slate-500 hover:text-emerald-700 transition min-w-[56px]"
             >
               <Mic className="w-5 h-5 text-red-500 animate-pulse" />
               <span className="text-[11px] mt-0.5 font-bold">ভয়েস খাতা</span>
@@ -564,7 +564,7 @@ export default function App() {
             {/* Reports Tab */}
             <button
               onClick={() => setActiveTab('reports')}
-              className={`flex flex-col items-center py-1.5 px-3 rounded-xl transition ${
+              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition min-w-[56px] ${
                 activeTab === 'reports'
                   ? 'text-emerald-700 font-bold'
                   : 'text-slate-500 font-medium'
@@ -588,7 +588,7 @@ export default function App() {
           />
 
           {/* Dropdown Menu Card */}
-          <div className="relative mb-20 sm:mb-0 w-full max-w-sm bg-white rounded-3xl p-4 shadow-2xl border border-slate-200 z-10 animate-in fade-in zoom-in-95 duration-150">
+          <div className="relative mb-24 sm:mb-0 w-full max-w-sm bg-white rounded-3xl p-4 shadow-2xl border border-slate-200 z-10 animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="px-1 mb-2.5 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">দ্রুত অ্যাকশন নির্বাচন করুন</span>

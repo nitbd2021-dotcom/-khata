@@ -122,14 +122,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="space-y-6 pb-24 md:pb-12">
       
       {/* Top Welcome & Google Drive Status Alert Banner */}
-      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-2xl p-4 sm:p-5 text-white shadow-md relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-1.5 sm:mb-2">
               <button
                 type="button"
                 onClick={onOpenUserSheet}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold border transition cursor-pointer max-w-full truncate ${
                   !isOnline
                     ? 'bg-amber-500/25 text-amber-200 border-amber-400/40 hover:bg-amber-500/35'
                     : pendingCount > 0
@@ -138,43 +138,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 }`}
                 title="গুগল শিট ভিউয়ার ও অফলাইন সিঙ্ক তথ্য দেখুন"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                <span>
+                <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">
                   {!isOnline
-                    ? `অফলাইন মোড (${pendingCount}টি হিসাব ডিভাইসে সংরক্ষিত • অনলাইনে স্বয়ংক্রিয় সিঙ্ক)`
+                    ? `অফলাইন মোড (${pendingCount}টি হিসাব ডিভাইসে সংরক্ষিত)`
                     : pendingCount > 0
                     ? `শিট সিঙ্ক হচ্ছে... (${pendingCount}টি অপেক্ষমান)`
-                    : 'গুগল ড্রাইভ ও শিটে সংরক্ষিত একাউন্ট (লাইভ সিঙ্ক)'}
+                    : 'গুগল ড্রাইভ ও শিটে লাইভ সিঙ্ক'}
                 </span>
               </button>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+            <h2 className="text-lg sm:text-2xl font-bold tracking-tight">
               {user.shopName}
             </h2>
-            <p className="text-emerald-100 text-sm mt-0.5">
+            <p className="text-emerald-100 text-xs sm:text-sm mt-0.5">
               আজকের ব্যবসার নিখুঁত হিসাব ও ডিজিটাল খাতা
             </p>
           </div>
 
           {/* Quick Actions Bar */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 w-full md:w-auto">
             {onOpenQRScanner && (
               <button
                 onClick={onOpenQRScanner}
-                className="flex items-center justify-center gap-2 bg-slate-900/90 hover:bg-black text-white font-bold px-3.5 py-2.5 rounded-xl text-xs sm:text-sm shadow-sm transition active:scale-98 cursor-pointer border border-emerald-500/40"
+                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 sm:gap-2 bg-slate-900/90 hover:bg-black text-white font-bold px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs sm:text-sm shadow-sm transition active:scale-98 cursor-pointer border border-emerald-500/40"
                 title="কাস্টমারের কিউআর কোড স্ক্যান করুন"
               >
-                <QrCode className="w-4 h-4 text-emerald-400" />
-                <span>QR কোড স্ক্যান</span>
+                <QrCode className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="whitespace-nowrap">QR স্ক্যান</span>
               </button>
             )}
 
             <button
               onClick={onOpenVoiceKhata}
-              className="flex items-center justify-center gap-2 bg-white text-emerald-800 hover:bg-emerald-50 font-bold px-3.5 py-2.5 rounded-xl text-xs sm:text-sm shadow-sm transition active:scale-98 cursor-pointer"
+              className="flex-1 md:flex-none flex items-center justify-center gap-1.5 sm:gap-2 bg-white text-emerald-800 hover:bg-emerald-50 font-bold px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs sm:text-sm shadow-sm transition active:scale-98 cursor-pointer"
             >
-              <Mic className="w-4 h-4 text-red-500 animate-bounce" />
-              <span>ভয়েস দিয়ে হিসাব লিখুন</span>
+              <Mic className="w-4 h-4 text-red-500 animate-bounce shrink-0" />
+              <span className="whitespace-nowrap">ভয়েস খাতা</span>
             </button>
           </div>
         </div>
@@ -182,29 +182,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* New User Google Sheet Helper Banner */}
       {!GoogleSheetsService.isRealGoogleSheetId(user.googleSheetId) && (
-        <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/90 rounded-2xl p-4 sm:p-4.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <FileSpreadsheet className="w-5 h-5" />
+        <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/90 rounded-2xl p-3.5 sm:p-4.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <h4 className="text-xs sm:text-sm font-bold text-emerald-950">
                   আপনার গুগল শিট কানেক্ট করে রাখুন
                 </h4>
                 <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  নতুন ব্যবহারকারী
+                  নতুন
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5 leading-relaxed">
-                ১-ক্লিকে নতুন স্প্রেডশিট বানিয়ে সরাসরি আপনার গুগল ড্রাইভে সব হিসাব ব্যাকআপ রাখুন ও ১-ক্লিকে তথ্য পাঠান।
+                ১-ক্লিকে নতুন স্প্রেডশিট বানিয়ে সরাসরি আপনার গুগল ড্রাইভে সব ব্যাকআপ রাখুন।
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
             <button
               onClick={onOpenUserSheet}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="w-full sm:w-auto justify-center px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>শিট সেটআপ ও ডাটা পাঠান</span>
@@ -215,8 +215,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {/* Primary Action Buttons: দ্রুত লেনদেন এন্ট্রি (Top Priority for Instant Access) */}
-      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs">
-        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+      <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-slate-200 shadow-xs">
+        <div className="flex items-center justify-between mb-2.5 sm:mb-3 gap-2 flex-wrap">
           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <Plus className="w-4 h-4 text-emerald-600" />
             <span>দ্রুত লেনদেন এন্ট্রি</span>
@@ -226,120 +226,120 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
         
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           
           {/* টাকা পেলাম (Payment Received / বাকি আদায়) */}
           <button
             onClick={() => onOpenAddTx('payment_received')}
-            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 transition active:scale-95 group cursor-pointer"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 transition active:scale-95 group cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-105 transition">
-              <ArrowDownLeft className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mb-1 shadow-sm group-hover:scale-105 transition">
+              <ArrowDownLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="font-bold text-sm sm:text-base">টাকা পেলাম</span>
-            <span className="text-[11px] text-emerald-700 font-medium">বাকি টাকা আদায়</span>
+            <span className="font-bold text-xs sm:text-base">টাকা পেলাম</span>
+            <span className="text-[10px] sm:text-[11px] text-emerald-700 font-medium">বাকি টাকা আদায়</span>
           </button>
 
           {/* বাকি দিলাম (Credit Given) */}
           <button
             onClick={() => onOpenAddTx('credit_given')}
-            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-800 transition active:scale-95 group cursor-pointer"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-4 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-800 transition active:scale-95 group cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-105 transition">
-              <ArrowUpRight className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-red-600 text-white flex items-center justify-center mb-1 shadow-sm group-hover:scale-105 transition">
+              <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="font-bold text-sm sm:text-base">বাকি দিলাম</span>
-            <span className="text-[11px] text-red-700 font-medium">পাওনা যোগ হবে</span>
+            <span className="font-bold text-xs sm:text-base">বাকি দিলাম</span>
+            <span className="text-[10px] sm:text-[11px] text-red-700 font-medium">পাওনা যোগ হবে</span>
           </button>
 
           {/* বাকি নিলাম (Credit Taken) */}
           <button
             onClick={() => onOpenAddTx('credit_taken')}
-            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 transition active:scale-95 group cursor-pointer"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-4 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 transition active:scale-95 group cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-105 transition">
-              <ShoppingBag className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-600 text-white flex items-center justify-center mb-1 shadow-sm group-hover:scale-105 transition">
+              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="font-bold text-sm sm:text-base">বাকি নিলাম</span>
-            <span className="text-[11px] text-purple-700 font-medium">দেনা যোগ হবে</span>
+            <span className="font-bold text-xs sm:text-base">বাকি নিলাম</span>
+            <span className="text-[10px] sm:text-[11px] text-purple-700 font-medium">দেনা যোগ হবে</span>
           </button>
 
           {/* ধার লেনদেন (Loan) */}
           <button
             onClick={() => onOpenAddTx('loan_given')}
-            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 transition active:scale-95 group cursor-pointer"
+            className="flex flex-col items-center justify-center p-2.5 sm:p-4 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 transition active:scale-95 group cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mb-1.5 shadow-sm group-hover:scale-105 transition">
-              <HandCoins className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mb-1 shadow-sm group-hover:scale-105 transition">
+              <HandCoins className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="font-bold text-sm sm:text-base">ধার দিলাম / পেলাম</span>
-            <span className="text-[11px] text-blue-700 font-medium">কর্জ আদান-প্রদান</span>
+            <span className="font-bold text-xs sm:text-base">ধার লেনদেন</span>
+            <span className="text-[10px] sm:text-[11px] text-blue-700 font-medium">কর্জ আদান-প্রদান</span>
           </button>
 
         </div>
       </div>
 
       {/* Main Metric Cards: মোট পাওনা & মোট দেনা */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         
         {/* মোট পাওনা (Receivable) */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-red-100 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between text-slate-500 text-xs sm:text-sm font-semibold mb-1">
-            <span>মোট পাওনা (বাকি)</span>
-            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+        <div className="bg-white p-3 sm:p-5 rounded-2xl border border-red-100 shadow-xs relative overflow-hidden">
+          <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-sm font-semibold mb-0.5 sm:mb-1">
+            <span className="truncate">মোট পাওনা (বাকি)</span>
+            <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-red-600 tracking-tight">
+          <div className="text-base sm:text-2xl font-extrabold text-red-600 tracking-tight truncate" title={`৳ ${summary.totalReceivable.toLocaleString('bn-BD')}`}>
             ৳ {summary.totalReceivable.toLocaleString('bn-BD')}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">
+          <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate">
             কাস্টমারদের কাছে পাবেন
           </p>
         </div>
 
         {/* মোট দেনা (Payable) */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-blue-100 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between text-slate-500 text-xs sm:text-sm font-semibold mb-1">
-            <span>মোট দেনা (দিতে হবে)</span>
-            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+        <div className="bg-white p-3 sm:p-5 rounded-2xl border border-blue-100 shadow-xs relative overflow-hidden">
+          <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-sm font-semibold mb-0.5 sm:mb-1">
+            <span className="truncate">মোট দেনা (দিতে হবে)</span>
+            <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-blue-600 tracking-tight">
+          <div className="text-base sm:text-2xl font-extrabold text-blue-600 tracking-tight truncate" title={`৳ ${summary.totalPayable.toLocaleString('bn-BD')}`}>
             ৳ {summary.totalPayable.toLocaleString('bn-BD')}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">
+          <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate">
             মহাজন বা অন্যদের দিতে হবে
           </p>
         </div>
 
         {/* আজকের নগদ জমা */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-emerald-100 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between text-slate-500 text-xs sm:text-sm font-semibold mb-1">
-            <span>আজকের জমা (ক্যাশ)</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <div className="bg-white p-3 sm:p-5 rounded-2xl border border-emerald-100 shadow-xs relative overflow-hidden">
+          <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-sm font-semibold mb-0.5 sm:mb-1">
+            <span className="truncate">আজকের জমা (ক্যাশ)</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-emerald-600 tracking-tight">
+          <div className="text-base sm:text-2xl font-extrabold text-emerald-600 tracking-tight truncate" title={`৳ ${summary.todayReceived.toLocaleString('bn-BD')}`}>
             ৳ {summary.todayReceived.toLocaleString('bn-BD')}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">
+          <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate">
             আজ নগদ আদায় ও জমা
           </p>
         </div>
 
         {/* আজকের খরচ */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-amber-100 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between text-slate-500 text-xs sm:text-sm font-semibold mb-1">
-            <span>আজকের খরচ</span>
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+        <div className="bg-white p-3 sm:p-5 rounded-2xl border border-amber-100 shadow-xs relative overflow-hidden">
+          <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-sm font-semibold mb-0.5 sm:mb-1">
+            <span className="truncate">আজকের খরচ</span>
+            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-amber-600 tracking-tight">
+          <div className="text-base sm:text-2xl font-extrabold text-amber-600 tracking-tight truncate" title={`৳ ${summary.todayExpenseAmount.toLocaleString('bn-BD')}`}>
             ৳ {summary.todayExpenseAmount.toLocaleString('bn-BD')}
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <p className="text-[11px] text-slate-400">দোকানের মোট খরচ</p>
+          <div className="flex items-center justify-between mt-0.5 sm:mt-1 gap-1">
+            <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">মোট খরচ</p>
             <button 
               onClick={onAddExpense}
-              className="text-[11px] text-emerald-700 hover:underline font-bold"
+              className="text-[10px] sm:text-[11px] text-emerald-700 hover:underline font-bold shrink-0 cursor-pointer"
             >
-              + খরচ যোগ
+              + খরচ
             </button>
           </div>
         </div>
