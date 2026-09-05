@@ -38,6 +38,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { UserSheetModal } from './components/UserSheetModal';
 import { ModeratorPortalView } from './components/ModeratorPortalView';
 import { QRScannerModal } from './components/QRScannerModal';
+import { PWAInstallBanner } from './components/PWAInstallPrompt';
 import { CustomerQRCodeModal } from './components/CustomerQRCodeModal';
 import { TransactionReceiptModal } from './components/TransactionReceiptModal';
 
@@ -401,6 +402,9 @@ export default function App() {
           </button>
         </div>
       )}
+
+      {/* Chrome / Android PWA Install Banner */}
+      <PWAInstallBanner />
 
       {/* Top Header */}
       {currentUser && (

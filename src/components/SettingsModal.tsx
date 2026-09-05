@@ -22,6 +22,7 @@ import {
 import { User } from '../types';
 import { GoogleSheetsService } from '../services/googleSheetsService';
 import { StorageService } from '../services/storageService';
+import { PWAInstallButton } from './PWAInstallPrompt';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -379,6 +380,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               পরিবর্তন সংরক্ষণ করুন
             </button>
           </form>
+
+          {/* Android & Chrome App Installation Section */}
+          <div className="pt-2 border-t border-slate-100">
+            <PWAInstallButton variant="full" />
+          </div>
 
           {/* Device and Session Settings */}
           <div className="pt-2 border-t border-slate-100">

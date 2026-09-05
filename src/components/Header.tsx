@@ -2,6 +2,7 @@ import React from 'react';
 import { BookOpen, Shield, Cloud, LogOut, CheckCircle, ExternalLink, Sparkles, Smartphone, Users, ShieldAlert, Wifi, WifiOff, RefreshCw, FileSpreadsheet, ShieldCheck, QrCode, UserPlus } from 'lucide-react';
 import { User } from '../types';
 import { StorageService } from '../services/storageService';
+import { PWAInstallButton } from './PWAInstallPrompt';
 
 interface HeaderProps {
   user: User;
@@ -254,6 +255,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>নতুন সাইন আপ</span>
               </button>
             )}
+
+            {/* Android / Chrome PWA App Install Button */}
+            <PWAInstallButton variant="header" />
 
             {/* Settings & Logout */}
             <button
