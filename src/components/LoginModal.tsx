@@ -13,8 +13,6 @@ import {
   Sparkles,
   Eye,
   EyeOff,
-  Shield,
-  ShieldCheck,
   UserPlus,
   User as UserIcon,
   Phone,
@@ -401,69 +399,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <span>খাতায় প্রবেশ করুন</span>
                 </button>
               </form>
-
-              {/* Shortcut Accounts for quick testing */}
-              <div className="pt-2 border-t border-slate-100">
-                <div className="text-[11px] text-slate-500 font-semibold mb-1.5 flex items-center gap-1">
-                  <Shield className="w-3.5 h-3.5 text-amber-600" />
-                  <span>ডেমো একাউন্ট শর্টকাট (১-ক্লিক ফিল):</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('Jahidulraju87@gmail.com');
-                      setPin('raju12158A+');
-                      setErrorMsg('');
-                    }}
-                    className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-950 text-left transition cursor-pointer"
-                    title="সুপার এডমিন একাউন্ট"
-                  >
-                    <div className="flex items-center gap-1 font-bold text-[10px] text-amber-900">
-                      <Shield className="w-3 h-3 text-amber-600 shrink-0" />
-                      <span>এডমিন</span>
-                    </div>
-                    <p className="text-[9px] text-amber-800 font-medium truncate">Jahidulraju87</p>
-                    <p className="text-[8px] text-amber-600 mt-0.5 font-mono">raju12158A+</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('moderator@khata.com');
-                      setPin('1234');
-                      setErrorMsg('');
-                    }}
-                    className="p-2 rounded-xl bg-teal-50 hover:bg-teal-100/80 border border-teal-200 text-teal-950 text-left transition cursor-pointer"
-                    title="মডারেটর একাউন্ট"
-                  >
-                    <div className="flex items-center gap-1 font-bold text-[10px] text-teal-900">
-                      <ShieldCheck className="w-3 h-3 text-teal-600 shrink-0" />
-                      <span>মডারেটর</span>
-                    </div>
-                    <p className="text-[9px] text-teal-800 font-medium truncate">moderator@khata</p>
-                    <p className="text-[8px] text-teal-600 mt-0.5 font-mono">পিন: 1234</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('nitbd2021@gmail.com');
-                      setPin('1234');
-                      setErrorMsg('');
-                    }}
-                    className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 text-left transition cursor-pointer"
-                    title="ডিএসআর একাউন্ট"
-                  >
-                    <div className="flex items-center gap-1 font-bold text-[10px] text-slate-800">
-                      <Store className="w-3 h-3 text-slate-600 shrink-0" />
-                      <span>ডিএসআর</span>
-                    </div>
-                    <p className="text-[9px] text-slate-600 font-medium truncate">nitbd2021</p>
-                    <p className="text-[8px] text-slate-400 mt-0.5 font-mono">পিন: 1234</p>
-                  </button>
-                </div>
-              </div>
 
               {/* Toggle to Register */}
               <div className="text-center pt-2">
