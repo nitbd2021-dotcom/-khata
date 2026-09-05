@@ -1,0 +1,261 @@
+import React from 'react';
+import { BookOpen, Shield, Cloud, LogOut, CheckCircle, ExternalLink, Sparkles, Smartphone, Users, ShieldAlert, Wifi, WifiOff, RefreshCw, FileSpreadsheet, ShieldCheck, QrCode } from 'lucide-react';
+import { User } from '../types';
+import { StorageService } from '../services/storageService';
+
+interface HeaderProps {
+  user: User;
+  isAdminView: boolean;
+  onToggleAdminView: () => void;
+  isModeratorView?: boolean;
+  onToggleModeratorView?: () => void;
+  onOpenSettings: () => void;
+  onLogout: () => void;
+  activeTab: 'dashboard' | 'customers' | 'reports';
+  setActiveTab: (tab: 'dashboard' | 'customers' | 'reports') => void;
+  onOpenVoiceKhata: () => void;
+  onOpenQRScanner?: () => void;
+  isRemembered: boolean;
+  isOnline?: boolean;
+  pendingCount?: number;
+  isSyncing?: boolean;
+  onOpenUserSheet?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  user,
+  isAdminView,
+  onToggleAdminView,
+  isModeratorView = false,
+  onToggleModeratorView,
+  onOpenSettings,
+  onLogout,
+  activeTab,
+  setActiveTab,
+  onOpenVoiceKhata,
+  onOpenQRScanner,
+  isRemembered,
+  isOnline = true,
+  pendingCount = 0,
+  isSyncing = false,
+  onOpenUserSheet,
+}) => {
+  const isMod = StorageService.isModeratorUser(user);
+  const isAdmin = StorageService.isAdminUser(user);
+
+  return (
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 sm:h-20 gap-2">
+          
+          {/* Brand Logo & Shop Name */}
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xl shadow-md shadow-emerald-200">
+              খ+
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-tight">
+                  খাতা+ <span className="text-xs font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Google Drive & Sheets</span>
+                </h1>
+                {isAdmin && (
+                  <span className="inline-flex items-center gap-1 text-[11px] bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md font-bold" title="সুপার এডমিন একাউন্ট">
+                    <Shield className="w-3 h-3 text-amber-700" /> সুপার এডমিন
+                  </span>
+                )}
+                {isMod && !isAdmin && (
+                  <span className="inline-flex items-center gap-1 text-[11px] bg-teal-100 text-teal-900 border border-teal-300 px-2 py-0.5 rounded-md font-bold" title="মডারেটর একাউন্ট">
+                    <ShieldCheck className="w-3 h-3 text-teal-700" /> মডারেটর
+                  </span>
+                )}
+                {isRemembered && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium" title="এই ডিভাইসে একাউন্ট সংরক্ষিত আছে">
+                    <Smartphone className="w-3 h-3 text-emerald-600" /> ডিভাইস সেভড
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 truncate max-w-[180px] sm:max-w-xs font-medium">
+                {user.shopName} • <span className="text-slate-400">{user.email}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Desktop Navigation Links */}
+          {(!isMod || isAdmin) && (
+            <nav className="hidden md:flex items-center space-x-1 bg-slate-100/80 p-1 rounded-xl">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'dashboard' && !isAdminView && !isModeratorView
+                    ? 'bg-white text-emerald-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                ড্যাশবোর্ড
+              </button>
+              <button
+                onClick={() => setActiveTab('customers')}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'customers' && !isAdminView && !isModeratorView
+                    ? 'bg-white text-emerald-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                কাস্টমার তালিকা
+              </button>
+              <button
+                onClick={() => setActiveTab('reports')}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'reports' && !isAdminView && !isModeratorView
+                    ? 'bg-white text-emerald-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                হিসাব ও রিপোর্ট
+              </button>
+            </nav>
+          )}
+
+          {/* Moderator Focused Header Center Badge */}
+          {isMod && !isAdmin && (
+            <div className="hidden md:flex items-center gap-2 bg-teal-50 border border-teal-200/80 px-4 py-1.5 rounded-2xl text-teal-900">
+              <ShieldCheck className="w-5 h-5 text-teal-600" />
+              <div className="text-left">
+                <span className="text-xs font-bold block leading-tight">মডারেটর কন্ট্রোল ও DSR মনিটরিং হাব</span>
+                <span className="text-[10px] text-teal-700 font-medium">অধীনস্থ সকল ডিএসআর-এর হিসাব ও নিয়ন্ত্রণ</span>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Actions & Status */}
+          <div className="flex items-center space-x-2">
+            
+            {/* QR Scanner Trigger - Only on Home screen for regular shops/admins */}
+            {(!isMod || isAdmin) && onOpenQRScanner && activeTab === 'dashboard' && (
+              <button
+                onClick={onOpenQRScanner}
+                className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-black text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition active:scale-95 cursor-pointer"
+                title="কাস্টমারের কিউআর কোড স্ক্যান করুন"
+              >
+                <QrCode className="w-4 h-4 text-emerald-400" />
+                <span className="hidden xs:inline">QR স্ক্যান</span>
+              </button>
+            )}
+
+            {/* Voice Khata Trigger - Only for regular shops/admins */}
+            {(!isMod || isAdmin) && (
+              <button
+                onClick={onOpenVoiceKhata}
+                className="hidden sm:inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition active:scale-95 cursor-pointer"
+                title="মুখে বলে হিসাব লিখুন"
+              >
+                <Sparkles className="w-4 h-4 text-emerald-200 animate-pulse" />
+                <span>ভয়েস খাতা</span>
+              </button>
+            )}
+
+            {/* Google Drive Sheet Live Button */}
+            {(!isMod || isAdmin) && (
+              onOpenUserSheet ? (
+                <button
+                  type="button"
+                  onClick={onOpenUserSheet}
+                  className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                    !isOnline
+                      ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                      : pendingCount > 0
+                      ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+                  }`}
+                  title="ব্যবহারকারীর গুগল ড্রাইভের অটোমেটিক শিট ফাইল ও অফলাইন সিঙ্ক দেখুন"
+                >
+                  {isSyncing ? (
+                    <RefreshCw className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+                  ) : !isOnline ? (
+                    <WifiOff className="w-3.5 h-3.5 text-amber-600" />
+                  ) : (
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  )}
+                  
+                  <span className="font-bold">
+                    {!isOnline ? (
+                      `অফলাইন (${pendingCount})`
+                    ) : isSyncing ? (
+                      'সিঙ্ক হচ্ছে...'
+                    ) : pendingCount > 0 ? (
+                      `শিট (${pendingCount} অপেক্ষমান)`
+                    ) : (
+                      'গুগল শিট'
+                    )}
+                  </span>
+                </button>
+              ) : user.googleSheetUrl ? (
+                <a
+                  href={user.googleSheetUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition"
+                  title="ব্যবহারকারীর গুগল ড্রাইভের অটোমেটিক শিট ফাইল ওপেন করুন"
+                >
+                  <Cloud className="w-4 h-4 text-emerald-600" />
+                  <span className="hidden lg:inline">ড্রাইভ শিট</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-500" />
+                </a>
+              ) : null
+            )}
+
+            {/* Moderator Portal Switcher (Visible ONLY when Super Admin is browsing) */}
+            {isAdmin && onToggleModeratorView && (
+              <button
+                onClick={onToggleModeratorView}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                  isModeratorView
+                    ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
+                    : 'bg-teal-50 text-teal-900 border-teal-200 hover:bg-teal-100'
+                }`}
+                title="মডারেটর হিসেবে অধীনস্থ সকল ডিএসআর-এর মোট বাকি ও তথ্য দেখুন"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+                <span>{isModeratorView ? 'ডিএসআর খাতা' : 'মডারেটর পোর্টাল'}</span>
+              </button>
+            )}
+
+            {/* Admin Sheet Switcher (Visible ONLY to verified Super Admin) */}
+            {isAdmin && (
+              <button
+                onClick={onToggleAdminView}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                  isAdminView
+                    ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                    : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
+                }`}
+                title="এডমিন কেন্দ্রীয় শিট ও সকল ব্যবহারকারীর পিন/হিসাব দেখুন"
+              >
+                <Shield className="w-3.5 h-3.5 text-amber-600" />
+                <span>{isAdminView ? 'খাতায় ফিরুন' : 'এডমিন শিট'}</span>
+              </button>
+            )}
+
+            {/* Settings & Logout */}
+            <button
+              onClick={onOpenSettings}
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+              title="সেটিংস ও ড্রাইভ সিঙ্ক কনফিগারেশন"
+            >
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
+            <button
+              onClick={onLogout}
+              className="p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 transition cursor-pointer"
+              title="লগআউট"
+            >
+              <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </header>
+  );
+};

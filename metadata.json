@@ -1,0 +1,6 @@
+{
+  "name": "খাতা+ (Khata+)",
+  "description": "গুগল ড্রাইভ ও গুগল শিট ভিত্তিক ডিজিটাল খাতা ও হিসাব রাখার প্ল্যাটফর্ম",
+  "requestFramePermissions": ["microphone", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
