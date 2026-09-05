@@ -14,7 +14,8 @@ import {
   Banknote,
   Mic,
   MicOff,
-  MapPin
+  MapPin,
+  Calculator
 } from 'lucide-react';
 import { Customer, PaymentMethod, TransactionType, User } from '../types';
 import { formatBanglaTxType } from '../services/googleSheetsService';
@@ -24,6 +25,7 @@ import {
   parseCustomerVoiceInput, 
   parseSpokenPhoneNumber 
 } from '../services/voiceService';
+import { FloatingCalculator } from './FloatingCalculator';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -66,6 +68,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newCustAddress, setNewCustAddress] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Built-in Floating Calculator State
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
 
   // Voice Recognition states
   type VoiceTarget = 'description' | 'customerName' | 'customerPhone' | 'customerAddress' | 'customerCombined' | null;
@@ -648,10 +653,21 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
 
           {/* Large Amount Display */}
-          <div className="bg-slate-900 rounded-2xl p-4 text-center text-white shadow-inner">
-            <span className="text-xs text-slate-400 font-medium block mb-1">
-              টাকার পরিমাণ (৳)
-            </span>
+          <div className="bg-slate-900 rounded-2xl p-4 text-center text-white shadow-inner relative">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-slate-400 font-medium">
+                টাকার পরিমাণ (৳)
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsCalculatorOpen(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition cursor-pointer active:scale-95"
+                title="ক্যালকুলেটর দিয়ে হিসাব করুন"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                <span>ক্যালকুলেটর</span>
+              </button>
+            </div>
             <div className="text-3xl sm:text-4xl font-extrabold tracking-tight text-emerald-400">
               ৳ {amountStr ? parseFloat(amountStr).toLocaleString('bn-BD') : '০'}
             </div>
@@ -914,6 +930,16 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
 
       </div>
+
+      {/* Built-in Floating Calculator */}
+      <FloatingCalculator
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
+        onApplyAmount={(calculatedVal) => {
+          setAmountStr(calculatedVal.toString());
+        }}
+        initialValue={parseFloat(amountStr) || 0}
+      />
     </div>
   );
 };
