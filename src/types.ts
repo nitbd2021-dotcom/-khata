@@ -30,6 +30,7 @@ export interface User {
   role?: UserRole;
   moderatorId?: string; // ID of the moderator this user is assigned to
   dueThreshold?: number; // সর্বোচ্চ বাকি সীমা বা বকেয়া সতর্কবার্তা থ্রেশহোল্ড (Receivable limit threshold)
+  monthlyExpenseBudget?: number; // মাসিক খরচ বাজেট বা সর্বোচ্চ খরচের সীমা (Monthly expense budget limit)
   dsrCreditLimit?: number; // মডারেটর কর্তৃক নির্ধারিত ডিএসআর-এর মোট সর্বোচ্চ বাকি সীমা (Total DSR credit limit set by moderator)
   isCreditLocked?: boolean; // মডারেটর কর্তৃক ডিএসআর-এর নতুন বাকি দেওয়া লক বা স্থগিত করা আছে কিনা
   dsrStatus?: 'active' | 'suspended'; // ডিএসআর একাউন্ট স্ট্যাটাস (সক্রিয় বা সাময়িক স্থগিত)

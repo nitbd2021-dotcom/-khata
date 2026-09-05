@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowDownLeft, 
   ArrowUpRight, 
@@ -378,105 +379,127 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <p className="text-slate-400 text-[11px] mt-0.5">উপরের বাটনগুলো চেপে প্রথম লেনদেন যোগ করুন</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            {recentTransactions.map((tx, idx) => {
-              const isPaymentReceived = tx.type === 'payment_received';
-              const isCreditGiven = tx.type === 'credit_given';
-              const isLoanGiven = tx.type === 'loan_given';
-              const isCreditTaken = tx.type === 'credit_taken';
+          <div className="divide-y divide-slate-100 overflow-hidden">
+            <AnimatePresence initial={false} mode="popLayout">
+              {recentTransactions.map((tx, idx) => {
+                const isPaymentReceived = tx.type === 'payment_received';
+                const isCreditGiven = tx.type === 'credit_given';
+                const isLoanGiven = tx.type === 'loan_given';
+                const isCreditTaken = tx.type === 'credit_taken';
+                const relativeTime = formatRelativeTime(tx.date);
+                const isJustNow = relativeTime === 'এইমাত্র' || (new Date().getTime() - new Date(tx.date).getTime() < 45000);
 
-              return (
-                <div
-                  key={`feed-${tx.id}-${idx}`}
-                  className="p-3.5 sm:p-4 hover:bg-slate-50/90 transition flex items-center justify-between gap-3 cursor-pointer group"
-                  onClick={() => {
-                    const cust = customers.find(c => c.id === tx.customerId);
-                    if (cust) onSelectCustomer(cust);
-                  }}
-                >
-                  <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    <div
-                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 font-bold ${
-                        isPaymentReceived
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : isCreditGiven
-                          ? 'bg-red-100 text-red-700'
-                          : isCreditTaken
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {isPaymentReceived ? (
-                        <ArrowDownLeft className="w-5 h-5" />
-                      ) : (
-                        <ArrowUpRight className="w-5 h-5" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-slate-900 text-sm leading-snug group-hover:text-emerald-700 transition">
-                          {tx.customerName}
-                        </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-700 whitespace-nowrap shrink-0">
-                          {formatBanglaTxType(tx.type)}
-                        </span>
-                        {tx.paymentMethod && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-md font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 whitespace-nowrap shrink-0">
-                            {formatBanglaPaymentMethod(tx.paymentMethod)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs text-slate-500">
-                        <span className="inline-flex items-center gap-1 text-[11px] text-teal-700 font-semibold bg-teal-50 px-1.5 py-0.5 rounded">
-                          <Clock className="w-3 h-3 text-teal-600" />
-                          <span>{formatRelativeTime(tx.date)}</span>
-                        </span>
-                        {tx.description && (
-                          <span className="truncate max-w-[140px] sm:max-w-xs text-slate-600">
-                            • {tx.description}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Amount and Receipt */}
-                  <div className="text-right shrink-0 pl-2 flex items-center gap-2.5">
-                    <div>
+                return (
+                  <motion.div
+                    key={tx.id || `feed-${idx}`}
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 420,
+                      damping: 26,
+                      mass: 0.6,
+                      delay: idx === 0 ? 0 : idx * 0.03,
+                    }}
+                    layout
+                    className={`p-3.5 sm:p-4 hover:bg-slate-50/90 transition-colors flex items-center justify-between gap-3 cursor-pointer group ${
+                      isJustNow ? 'bg-emerald-50/35' : ''
+                    }`}
+                    onClick={() => {
+                      const cust = customers.find(c => c.id === tx.customerId);
+                      if (cust) onSelectCustomer(cust);
+                    }}
+                  >
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
                       <div
-                        className={`font-black text-sm sm:text-base ${
+                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 font-bold shadow-2xs ${
                           isPaymentReceived
-                            ? 'text-emerald-600'
-                            : isCreditGiven || isLoanGiven
-                            ? 'text-red-600'
-                            : 'text-purple-600'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : isCreditGiven
+                            ? 'bg-red-100 text-red-700'
+                            : isCreditTaken
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-blue-100 text-blue-700'
                         }`}
                       >
-                        {isPaymentReceived ? '-' : '+'} ৳{tx.amount.toLocaleString('bn-BD')}
+                        {isPaymentReceived ? (
+                          <ArrowDownLeft className="w-5 h-5" />
+                        ) : (
+                          <ArrowUpRight className="w-5 h-5" />
+                        )}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
-                        ব্যালেন্স: {tx.balanceAfter >= 0 ? `পাওনা ৳${tx.balanceAfter.toLocaleString('bn-BD')}` : `দেনা ৳${Math.abs(tx.balanceAfter).toLocaleString('bn-BD')}`}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-900 text-sm leading-snug group-hover:text-emerald-700 transition">
+                            {tx.customerName}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-700 whitespace-nowrap shrink-0">
+                            {formatBanglaTxType(tx.type)}
+                          </span>
+                          {tx.paymentMethod && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-md font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 whitespace-nowrap shrink-0">
+                              {formatBanglaPaymentMethod(tx.paymentMethod)}
+                            </span>
+                          )}
+                          {isJustNow && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-600 text-white animate-pulse shrink-0">
+                              নতুন
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs text-slate-500">
+                          <span className="inline-flex items-center gap-1 text-[11px] text-teal-700 font-semibold bg-teal-50 px-1.5 py-0.5 rounded">
+                            <Clock className="w-3 h-3 text-teal-600" />
+                            <span>{relativeTime}</span>
+                          </span>
+                          {tx.description && (
+                            <span className="truncate max-w-[140px] sm:max-w-xs text-slate-600">
+                              • {tx.description}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {onViewReceipt && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewReceipt(tx);
-                        }}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold transition shadow-2xs cursor-pointer shrink-0"
-                        title="রসিদ দেখুন ও WhatsApp-এ পাঠান"
-                      >
-                        <Receipt className="w-3 h-3 text-teal-600" />
-                        <span className="hidden sm:inline">রসিদ</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                    {/* Amount and Receipt */}
+                    <div className="text-right shrink-0 pl-2 flex items-center gap-2.5">
+                      <div>
+                        <div
+                          className={`font-black text-sm sm:text-base ${
+                            isPaymentReceived
+                              ? 'text-emerald-600'
+                              : isCreditGiven || isLoanGiven
+                              ? 'text-red-600'
+                              : 'text-purple-600'
+                          }`}
+                        >
+                          {isPaymentReceived ? '-' : '+'} ৳{tx.amount.toLocaleString('bn-BD')}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                          ব্যালেন্স: {tx.balanceAfter >= 0 ? `পাওনা ৳${tx.balanceAfter.toLocaleString('bn-BD')}` : `দেনা ৳${Math.abs(tx.balanceAfter).toLocaleString('bn-BD')}`}
+                        </div>
+                      </div>
+
+                      {onViewReceipt && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewReceipt(tx);
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold transition shadow-2xs cursor-pointer shrink-0"
+                          title="রসিদ দেখুন ও WhatsApp-এ পাঠান"
+                        >
+                          <Receipt className="w-3 h-3 text-teal-600" />
+                          <span className="hidden sm:inline">রসিদ</span>
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
       </div>

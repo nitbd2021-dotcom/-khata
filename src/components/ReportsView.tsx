@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   BarChart3, 
   Download, 
@@ -19,11 +19,17 @@ import {
   CheckCircle2,
   RotateCcw,
   Info,
-  CalendarDays
+  CalendarDays,
+  Target,
+  AlertTriangle,
+  AlertCircle,
+  Settings,
+  Edit2
 } from 'lucide-react';
 import { Customer, Expense, Transaction, User } from '../types';
 import { formatBanglaPaymentMethod, formatBanglaTxType, GoogleSheetsService } from '../services/googleSheetsService';
 import { DailyTransactionsBarChart } from './DailyTransactionsBarChart';
+import { MonthlyIncomeExpenseChart } from './MonthlyIncomeExpenseChart';
 
 interface ReportsViewProps {
   user: User;
@@ -32,6 +38,8 @@ interface ReportsViewProps {
   expenses: Expense[];
   onAddExpense: () => void;
   onViewReceipt?: (transaction: Transaction) => void;
+  onOpenSettings?: () => void;
+  onUpdateUser?: (updated: User) => void;
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = ({
@@ -41,6 +49,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   expenses,
   onAddExpense,
   onViewReceipt,
+  onOpenSettings,
+  onUpdateUser,
 }) => {
   const [timeRange, setTimeRange] = useState<'today' | '7days' | 'month' | 'all' | 'custom'>('month');
   const [customMode, setCustomMode] = useState<'single' | 'range'>('single');
@@ -78,6 +88,53 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     } catch {
       return ymdStr;
     }
+  };
+
+  // Monthly Expense Budget Calculations
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [budgetInput, setBudgetInput] = useState<string>(String(user.monthlyExpenseBudget || ''));
+
+  const curMonthIdx = now.getMonth();
+  const bengaliMonthsList = [
+    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+  ];
+  const currentMonthName = bengaliMonthsList[curMonthIdx];
+
+  const currentMonthExpenseTotal = useMemo(() => {
+    let sum = 0;
+    expenses.forEach(e => {
+      if (!e.date) return;
+      const d = new Date(e.date);
+      if (!isNaN(d.getTime()) && d.getFullYear() === curYear && d.getMonth() === curMonthIdx) {
+        sum += Number(e.amount) || 0;
+      }
+    });
+    transactions.forEach(t => {
+      if (t.type === 'expense' && t.date) {
+        const d = new Date(t.date);
+        if (!isNaN(d.getTime()) && d.getFullYear() === curYear && d.getMonth() === curMonthIdx) {
+          sum += Number(t.amount) || 0;
+        }
+      }
+    });
+    return sum;
+  }, [expenses, transactions, curYear, curMonthIdx]);
+
+  const monthlyBudget = Number(user.monthlyExpenseBudget) || 0;
+  const percentUsed = monthlyBudget > 0 ? Math.round((currentMonthExpenseTotal / monthlyBudget) * 100) : 0;
+  const remainingBudget = monthlyBudget - currentMonthExpenseTotal;
+  const isBudgetExceeded = monthlyBudget > 0 && currentMonthExpenseTotal > monthlyBudget;
+  const isBudgetNearLimit = monthlyBudget > 0 && percentUsed >= 75 && !isBudgetExceeded;
+
+  const handleSaveBudgetInline = (amount: number) => {
+    if (onUpdateUser) {
+      onUpdateUser({
+        ...user,
+        monthlyExpenseBudget: Math.max(0, amount),
+      });
+    }
+    setIsEditingBudget(false);
   };
 
   // Filter function for Date
@@ -550,6 +607,356 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Monthly Expense Budget & Spending Limit Progress Bar Section */}
+      <div id="monthly-expense-budget-card" className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-4">
+        {/* Header & Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 font-bold shadow-2xs ${
+              isBudgetExceeded
+                ? 'bg-rose-600 text-white'
+                : isBudgetNearLimit
+                ? 'bg-amber-500 text-white'
+                : 'bg-gradient-to-tr from-emerald-600 to-teal-500 text-white'
+            }`}>
+              <Target className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-slate-900">
+                  মাসিক খরচের বাজেট ট্র্যাকার
+                </h3>
+                <span className="text-[11px] bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold border border-slate-200">
+                  {currentMonthName} {curYear.toLocaleString('bn-BD').replace(/,/g, '')}
+                </span>
+                {monthlyBudget > 0 && (
+                  <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold border flex items-center gap-1 ${
+                    isBudgetExceeded
+                      ? 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse'
+                      : isBudgetNearLimit
+                      ? 'bg-amber-100 text-amber-900 border-amber-300'
+                      : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                  }`}>
+                    {isBudgetExceeded ? (
+                      <>
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                        <span>বাজেট অতিক্রম ({percentUsed}%)</span>
+                      </>
+                    ) : isBudgetNearLimit ? (
+                      <>
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                        <span>সীমার কাছাকাছি ({percentUsed}%)</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>বাজেট নিরাপদ ({percentUsed}%)</span>
+                      </>
+                    )}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                সেটিংসে নির্ধারিত মাসিক সর্বোচ্চ খরচের সীমার সাথে চলতি মাসের ব্যয়ের তুলনা
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap self-start sm:self-center">
+            {monthlyBudget > 0 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBudgetInput(String(monthlyBudget));
+                    setIsEditingBudget(prev => !prev);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-slate-600" />
+                  <span>{isEditingBudget ? 'সম্পাদনা বন্ধ' : 'বাজেট পরিবর্তন'}</span>
+                </button>
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer"
+                    title="সেটিংস মেনু"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBudgetInput('10000');
+                    setIsEditingBudget(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  <Target className="w-3.5 h-3.5" />
+                  <span>বাজেট সেট করুন</span>
+                </button>
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>সেটিংস</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Inline Quick Budget Editor */}
+        {isEditingBudget && (
+          <div className="p-3.5 bg-rose-50/60 rounded-2xl border border-rose-200 space-y-2.5 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-rose-950 flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-rose-600" />
+                <span>মাসিক খরচের বাজেট নির্ধারণ করুন (Monthly Expense Budget)</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsEditingBudget(false)}
+                className="text-xs text-slate-500 hover:text-slate-700 font-semibold"
+              >
+                বাতিল
+              </button>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">৳</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="500"
+                  value={budgetInput}
+                  onChange={e => setBudgetInput(e.target.value)}
+                  placeholder="যেমন: ১০০০০ বা ২০০০০..."
+                  className="w-full bg-white border border-rose-300 rounded-xl pl-8 pr-3 py-2 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSaveBudgetInline(Number(budgetInput) || 0)}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer shrink-0"
+              >
+                সংরক্ষণ করুন
+              </button>
+            </div>
+            {/* Presets */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              <span className="text-[10px] text-rose-800 font-bold">কুইক সিলেক্ট:</span>
+              {[5000, 10000, 15000, 20000, 30000, 50000].map(amt => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => {
+                    setBudgetInput(String(amt));
+                    handleSaveBudgetInline(amt);
+                  }}
+                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-white text-rose-900 border border-rose-200 hover:bg-rose-100 transition cursor-pointer"
+                >
+                  ৳{amt.toLocaleString('bn-BD')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {monthlyBudget > 0 ? (
+          <>
+            {/* 4 Financial KPI Stat Cards for Monthly Budget */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Monthly Budget Limit */}
+              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
+                  <span>নির্ধারিত মাসিক বাজেট</span>
+                  <Target className="w-3.5 h-3.5 text-slate-600" />
+                </div>
+                <div className="text-lg sm:text-xl font-black text-slate-900">
+                  ৳{monthlyBudget.toLocaleString('bn-BD')}
+                </div>
+                <span className="text-[10px] text-slate-400">সর্বোচ্চ খরচের সীমা</span>
+              </div>
+
+              {/* Current Month Spending */}
+              <div className="bg-rose-50/50 border border-rose-200 p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between text-rose-800 text-xs font-semibold mb-1">
+                  <span>চলতি মাসে খরচ হয়েছে</span>
+                  <Receipt className="w-3.5 h-3.5 text-rose-600" />
+                </div>
+                <div className="text-lg sm:text-xl font-black text-rose-700">
+                  ৳{currentMonthExpenseTotal.toLocaleString('bn-BD')}
+                </div>
+                <span className="text-[10px] text-rose-600/80">দোকানের মোট ব্যয়</span>
+              </div>
+
+              {/* Remaining Budget or Deficit */}
+              <div className={`p-3.5 rounded-2xl border ${
+                isBudgetExceeded 
+                  ? 'bg-rose-50 border-rose-300 text-rose-900' 
+                  : 'bg-emerald-50/50 border-emerald-200 text-emerald-900'
+              }`}>
+                <div className="flex items-center justify-between text-xs font-semibold mb-1">
+                  <span>{isBudgetExceeded ? 'অতিরিক্ত খরচ (ঘাটতি)' : 'অবশিষ্ট বাজেট'}</span>
+                  {isBudgetExceeded ? (
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                  ) : (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  )}
+                </div>
+                <div className={`text-lg sm:text-xl font-black ${isBudgetExceeded ? 'text-rose-700' : 'text-emerald-700'}`}>
+                  {isBudgetExceeded ? '-' : ''}৳{Math.abs(remainingBudget).toLocaleString('bn-BD')}
+                </div>
+                <span className="text-[10px] text-slate-500">
+                  {isBudgetExceeded ? 'বাজেট সীমা ছাড়িয়েছে' : 'বাকি আছে খরচের জন্য'}
+                </span>
+              </div>
+
+              {/* Budget Consumed Percentage */}
+              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
+                <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
+                  <span>বাজেট ব্যয়ের হার</span>
+                  <span className="text-[10px] font-bold text-slate-600">{currentMonthName}</span>
+                </div>
+                <div className={`text-lg sm:text-xl font-black ${
+                  isBudgetExceeded ? 'text-rose-700' : isBudgetNearLimit ? 'text-amber-600' : 'text-slate-900'
+                }`}>
+                  {percentUsed}%
+                </div>
+                <span className="text-[10px] text-slate-400">
+                  {isBudgetExceeded ? '১০০% এর বেশি খরচ' : `${100 - percentUsed}% অবশিষ্ট`}
+                </span>
+              </div>
+            </div>
+
+            {/* Visual Spending Limit Progress Bar */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <span>বাজেট প্রগ্রেস ট্র্যাকার</span>
+                  <span className="text-[11px] text-slate-400 font-normal">
+                    (৳{currentMonthExpenseTotal.toLocaleString('bn-BD')} / ৳{monthlyBudget.toLocaleString('bn-BD')})
+                  </span>
+                </span>
+                <span className={`font-black text-xs ${
+                  isBudgetExceeded ? 'text-rose-700' : isBudgetNearLimit ? 'text-amber-600' : 'text-emerald-700'
+                }`}>
+                  {percentUsed}% ব্যবহৃত
+                </span>
+              </div>
+
+              {/* Track Container with Notches */}
+              <div className="relative w-full bg-slate-100 rounded-full h-4 sm:h-5 overflow-hidden border border-slate-200 shadow-inner flex items-center">
+                {/* Milestone tick lines inside */}
+                <div className="absolute left-1/4 top-0 bottom-0 w-px bg-slate-300/80 z-10 pointer-events-none" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-300/80 z-10 pointer-events-none" />
+                <div className="absolute left-3/4 top-0 bottom-0 w-px bg-slate-300/80 z-10 pointer-events-none" />
+
+                {/* Progress bar fill */}
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ease-out relative ${
+                    isBudgetExceeded
+                      ? 'bg-gradient-to-r from-rose-500 via-red-600 to-rose-700'
+                      : isBudgetNearLimit
+                      ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500'
+                      : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(3, percentUsed))}%` }}
+                />
+              </div>
+
+              {/* Scale Marker Ticks Below Bar */}
+              <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                <span>০% (৳০)</span>
+                <span className="hidden sm:inline">৫০% (৳{Math.round(monthlyBudget / 2).toLocaleString('bn-BD')})</span>
+                <span className="hidden sm:inline">৭৫% (৳{Math.round(monthlyBudget * 0.75).toLocaleString('bn-BD')})</span>
+                <span className="font-bold text-slate-600">১০০% বাজেট সীমা (৳{monthlyBudget.toLocaleString('bn-BD')})</span>
+              </div>
+            </div>
+
+            {/* Contextual Advisory Banner */}
+            {isBudgetExceeded ? (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-xs text-rose-900">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold">সতর্কবার্তা: নির্ধারিত বাজেট অতিক্রম করেছে!</p>
+                  <p className="text-rose-800/90 text-[11px] leading-relaxed">
+                    চলতি মাসে আপনার মোট দোকান খরচ বাজেট (৳{monthlyBudget.toLocaleString('bn-BD')}) ছাড়িয়ে <strong>৳{Math.abs(remainingBudget).toLocaleString('bn-BD')}</strong> অতিরিক্ত হয়েছে। অপ্রয়োজনীয় খরচ অবিলম্বে নিয়ন্ত্রণ করার পরামর্শ দেওয়া হচ্ছে।
+                  </p>
+                </div>
+              </div>
+            ) : isBudgetNearLimit ? (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold">সতর্ক দৃষ্টি রাখুন: বাজেট শেষের পথে</p>
+                  <p className="text-amber-800/90 text-[11px] leading-relaxed">
+                    চলতি মাসের খরচের বাজেটের <strong>{percentUsed}%</strong> ইতিমধ্যে ব্যয় হয়েছে। মাসের বাকি দিনগুলোর জন্য আপনার হাতে আর মাত্র <strong>৳{remainingBudget.toLocaleString('bn-BD')}</strong> খরচ করার সুযোগ রয়েছে।
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-start gap-2.5 text-xs text-emerald-900">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold">চমৎকার বাজেট নিয়ন্ত্রণ!</p>
+                  <p className="text-emerald-800/90 text-[11px] leading-relaxed">
+                    চলতি মাসে আপনার দোকান খরচ নির্ধারিত বাজেটের অনুকূলে রয়েছে। এই মাসে আরও <strong>৳{remainingBudget.toLocaleString('bn-BD')}</strong> ব্যয় করার বাজেট বরাদ্দ রয়েছে।
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Empty / Setup Callout State when monthlyBudget is 0 */
+          <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-5 text-center space-y-3">
+            <div className="w-10 h-10 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
+              <Target className="w-5 h-5" />
+            </div>
+            <div className="max-w-md mx-auto">
+              <h4 className="text-sm font-bold text-slate-800">
+                এখনো কোনো মাসিক খরচের বাজেট নির্ধারণ করা হয়নি
+              </h4>
+              <p className="text-xs text-slate-500 mt-1">
+                দোকানের অতিরিক্ত খরচ রোধ করতে একটি মাসিক খরচের সীমা নির্ধারণ করুন। সীমা নির্ধারণ করলে এখানে রিয়েল-টাইম খরচ বনাম বাজেট প্রগ্রেস বার প্রদর্শিত হবে।
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 flex-wrap pt-1">
+              {[5000, 10000, 15000, 20000].map(amt => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => handleSaveBudgetInline(amt)}
+                  className="px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-900 border border-rose-200 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+                >
+                  ৳{amt.toLocaleString('bn-BD')} নির্ধারণ করুন
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <MonthlyIncomeExpenseChart
+        transactions={transactions}
+        expenses={expenses}
+        onSelectDate={(clickedYMD) => {
+          setTimeRange('custom');
+          setCustomMode('single');
+          setStartDate(clickedYMD);
+          setEndDate(clickedYMD);
+        }}
+      />
 
       {/* 30-Day Daily Transactions Bar Chart (Recharts) */}
       <DailyTransactionsBarChart 

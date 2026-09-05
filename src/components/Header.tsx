@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Shield, Cloud, LogOut, CheckCircle, ExternalLink, Sparkles, Smartphone, Users, ShieldAlert, Wifi, WifiOff, RefreshCw, FileSpreadsheet, ShieldCheck, QrCode } from 'lucide-react';
+import { BookOpen, Shield, Cloud, LogOut, CheckCircle, ExternalLink, Sparkles, Smartphone, Users, ShieldAlert, Wifi, WifiOff, RefreshCw, FileSpreadsheet, ShieldCheck, QrCode, UserPlus } from 'lucide-react';
 import { User } from '../types';
 import { StorageService } from '../services/storageService';
 
@@ -11,6 +11,7 @@ interface HeaderProps {
   onToggleModeratorView?: () => void;
   onOpenSettings: () => void;
   onLogout: () => void;
+  onOpenAuthModal?: (mode: 'login' | 'register') => void;
   activeTab: 'dashboard' | 'customers' | 'reports';
   setActiveTab: (tab: 'dashboard' | 'customers' | 'reports') => void;
   onOpenVoiceKhata: () => void;
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleModeratorView,
   onOpenSettings,
   onLogout,
+  onOpenAuthModal,
   activeTab,
   setActiveTab,
   onOpenVoiceKhata,
@@ -238,6 +240,18 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Shield className="w-3.5 h-3.5 text-amber-600" />
                 <span className="hidden xs:inline">{isAdminView ? 'খাতায় ফিরুন' : 'এডমিন'}</span>
+              </button>
+            )}
+
+            {/* Sign Up / Switch Account Button */}
+            {onOpenAuthModal && (
+              <button
+                onClick={() => onOpenAuthModal('register')}
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer shrink-0"
+                title="নতুন খাতা সাইন আপ করুন বা একাউন্ট পরিবর্তন করুন"
+              >
+                <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+                <span>নতুন সাইন আপ</span>
               </button>
             )}
 

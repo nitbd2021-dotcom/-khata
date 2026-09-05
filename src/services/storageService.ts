@@ -91,6 +91,7 @@ const seedInitialData = () => {
     role: 'user',
     moderatorId: 'user-mod-1',
     dueThreshold: 2500,
+    monthlyExpenseBudget: 15000,
   };
 
   const demoUser2: User = {
@@ -485,6 +486,140 @@ export const StorageService = {
     } else {
       localStorage.removeItem(STORAGE_CURRENT_USER_KEY);
     }
+  },
+
+  // Explicit Login User
+  loginUser: (
+    email: string,
+    pin: string,
+    rememberMe: boolean = true
+  ): User => {
+    const users = StorageService.getAllUsers();
+    const cleanInput = email.trim();
+    const normalizedEmail = cleanInput.toLowerCase();
+    const isAdminEmail = normalizedEmail === ADMIN_EMAIL.toLowerCase();
+
+    const existing = users.find(
+      u => u.email.toLowerCase() === normalizedEmail || 
+           (u.phone && u.phone.trim().replace(/\D/g, '') === cleanInput.replace(/\D/g, ''))
+    );
+
+    if (isAdminEmail) {
+      if (pin.trim() !== ADMIN_PASSWORD) {
+        throw new Error('ভুল এডমিন পাসওয়ার্ড! এডমিন পাসওয়ার্ড (raju12158A+) সঠিকভাবে লিখুন।');
+      }
+      const adminUserToUse = existing || {
+        id: 'user-admin-jahidul',
+        email: 'Jahidulraju87@gmail.com',
+        name: 'জাহিদুল ইসলাম রাজু',
+        phone: '01712158000',
+        pin: ADMIN_PASSWORD,
+        shopName: 'খাতা+ কেন্দ্রীয় এডমিন হেডকোয়ার্টার',
+        shopCategory: 'এডমিন কন্ট্রোল',
+        createdAt: new Date().toISOString(),
+        googleSheetId: 'admin_master_ledger_sheet',
+        googleSheetUrl: 'https://docs.google.com/spreadsheets/d/admin_master_ledger_sheet/edit',
+        isAdmin: true,
+        role: 'admin' as const,
+      };
+      adminUserToUse.isAdmin = true;
+      adminUserToUse.pin = ADMIN_PASSWORD;
+      StorageService.saveUser(adminUserToUse);
+      StorageService.setCurrentUser(adminUserToUse.id);
+
+      if (rememberMe) {
+        StorageService.saveDeviceSession({
+          deviceId: 'dev-' + adminUserToUse.id,
+          email: adminUserToUse.email,
+          pin: adminUserToUse.pin,
+          rememberMe: true,
+          shopName: adminUserToUse.shopName,
+          lastActive: new Date().toISOString(),
+        });
+      }
+      return adminUserToUse;
+    }
+
+    if (!existing) {
+      throw new Error('এই ইমেইল দিয়ে কোনো একাউন্ট পাওয়া যায়নি! দয়া করে উপরের "নতুন সাইন আপ" বাটনে ক্লিক করে একাউন্ট তৈরি করুন।');
+    }
+
+    if (existing.pin !== pin.trim()) {
+      throw new Error('ভুল পাসওয়ার্ড / পিন দিয়েছেন! সঠিক পাসওয়ার্ড বা পিন লিখুন।');
+    }
+
+    StorageService.setCurrentUser(existing.id);
+
+    if (rememberMe) {
+      StorageService.saveDeviceSession({
+        deviceId: 'dev-' + existing.id,
+        email: existing.email,
+        pin: existing.pin,
+        rememberMe: true,
+        shopName: existing.shopName,
+        lastActive: new Date().toISOString(),
+      });
+    }
+
+    return existing;
+  },
+
+  // Explicit Register New User
+  registerUser: (data: {
+    email: string;
+    pin: string;
+    shopName: string;
+    shopCategory?: string;
+    name?: string;
+    phone?: string;
+    shopAddress?: string;
+  }, rememberMe: boolean = true): User => {
+    const users = StorageService.getAllUsers();
+    const normalizedEmail = data.email.trim().toLowerCase();
+
+    if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
+      throw new Error('এই ইমেইলটি সুপার এডমিন একাউন্টের জন্য সংরক্ষিত। দয়া করে "লগইন" করুন।');
+    }
+
+    const existing = users.find(u => u.email.toLowerCase() === normalizedEmail);
+    if (existing) {
+      throw new Error('এই ইমেইল দিয়ে আগেই একটি একাউন্ট তৈরি করা আছে! অনুগ্রহ করে "লগইন" করুন।');
+    }
+
+    const newUser: User = {
+      id: generateId(),
+      email: normalizedEmail,
+      pin: data.pin.trim(),
+      name: data.name?.trim() || data.shopName.trim(),
+      phone: data.phone?.trim() || '',
+      shopName: data.shopName.trim() || 'আমার খাতা ও দোকান',
+      shopAddress: data.shopAddress?.trim() || '',
+      shopCategory: data.shopCategory || 'মুদি দোকান',
+      createdAt: new Date().toISOString(),
+      isAdmin: false,
+      role: 'user',
+      moderatorId: 'user-mod-1', // Automatically assigned to primary moderator
+      dueThreshold: 2500,
+      monthlyExpenseBudget: 10000,
+      googleSheetId: '',
+      googleSheetUrl: '',
+    };
+
+    StorageService.saveUser(newUser);
+    StorageService.setCurrentUser(newUser.id);
+
+    if (rememberMe) {
+      StorageService.saveDeviceSession({
+        deviceId: 'dev-' + newUser.id,
+        email: newUser.email,
+        pin: newUser.pin,
+        rememberMe: true,
+        shopName: newUser.shopName,
+        lastActive: new Date().toISOString(),
+      });
+    }
+
+    return newUser;
   },
 
   registerOrLogin: (

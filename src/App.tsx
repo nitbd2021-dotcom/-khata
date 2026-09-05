@@ -66,6 +66,7 @@ export default function App() {
 
   // Modals
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [loginModalInitialMode, setLoginModalInitialMode] = useState<'login' | 'register'>('login');
   const [isUserSheetOpen, setIsUserSheetOpen] = useState<boolean>(false);
   const [isAddTxOpen, setIsAddTxOpen] = useState<boolean>(false);
   const [addTxDefaultType, setAddTxDefaultType] = useState<TransactionType>('payment_received');
@@ -419,6 +420,10 @@ export default function App() {
           }}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onLogout={handleLogout}
+          onOpenAuthModal={(mode) => {
+            setLoginModalInitialMode(mode);
+            setIsLoginModalOpen(true);
+          }}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onOpenVoiceKhata={() => setIsVoiceKhataOpen(true)}
@@ -500,6 +505,11 @@ export default function App() {
                     expenses={expenses}
                     onAddExpense={() => setIsAddExpenseOpen(true)}
                     onViewReceipt={handleViewReceipt}
+                    onOpenSettings={() => setIsSettingsOpen(true)}
+                    onUpdateUser={updated => {
+                      StorageService.saveUser(updated);
+                      setCurrentUser(updated);
+                    }}
                   />
                 )}
               </>
@@ -703,6 +713,8 @@ export default function App() {
       {isLoginModalOpen && (
         <LoginModal
           isOpen={isLoginModalOpen}
+          initialMode={loginModalInitialMode}
+          onClose={currentUser ? () => setIsLoginModalOpen(false) : undefined}
           onLoginSuccess={handleLoginSuccess}
         />
       )}
@@ -769,6 +781,10 @@ export default function App() {
             setCurrentUser(updated);
           }}
           onLogout={handleLogout}
+          onOpenAuthModal={(mode) => {
+            setLoginModalInitialMode(mode);
+            setIsLoginModalOpen(true);
+          }}
         />
       )}
 

@@ -13,7 +13,11 @@ import {
   Trash2,
   Sparkles,
   Copy,
-  AlertTriangle
+  AlertTriangle,
+  UserPlus,
+  LogIn,
+  Target,
+  Receipt
 } from 'lucide-react';
 import { User } from '../types';
 import { GoogleSheetsService } from '../services/googleSheetsService';
@@ -25,6 +29,7 @@ interface SettingsModalProps {
   user: User;
   onUpdateUser: (updated: User) => void;
   onLogout: () => void;
+  onOpenAuthModal?: (mode: 'login' | 'register') => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -33,11 +38,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   user,
   onUpdateUser,
   onLogout,
+  onOpenAuthModal,
 }) => {
   const [shopName, setShopName] = useState(user.shopName);
   const [shopAddress, setShopAddress] = useState(user.shopAddress || '');
   const [pin, setPin] = useState(user.pin);
   const [dueThreshold, setDueThreshold] = useState<number>(user.dueThreshold ?? 2500);
+  const [monthlyExpenseBudget, setMonthlyExpenseBudget] = useState<number>(user.monthlyExpenseBudget ?? 10000);
   const [sheetUrlInput, setSheetUrlInput] = useState(user.googleSheetUrl || '');
   const [clientId, setClientId] = useState(GoogleSheetsService.getCustomClientId());
   const [isSyncing, setIsSyncing] = useState(false);
@@ -70,6 +77,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       googleSheetId: newSheetId,
       googleSheetUrl: newSheetUrl,
       dueThreshold: Math.max(0, Number(dueThreshold) || 2500),
+      monthlyExpenseBudget: Math.max(0, Number(monthlyExpenseBudget) || 0),
     };
 
     onUpdateUser(updated);
@@ -315,6 +323,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
+            {/* Monthly Expense Budget Limit Setting */}
+            <div id="settings-expense-budget-section" className="bg-rose-50/80 p-3.5 sm:p-4 rounded-2xl border border-rose-200 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-rose-950 flex items-center gap-1.5">
+                  <Target className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>মাসিক খরচের বাজেট (Monthly Expense Budget)</span>
+                </label>
+                <span className="text-[11px] font-black text-rose-800 bg-rose-200/80 px-2 py-0.5 rounded-lg border border-rose-300">
+                  {monthlyExpenseBudget > 0 ? `৳${Number(monthlyExpenseBudget).toLocaleString('bn-BD')}` : 'নির্ধারিত নেই'}
+                </span>
+              </div>
+
+              <p className="text-[11px] text-rose-900/85 leading-relaxed">
+                দোকানের মাসিক মোট ব্যয়ের লক্ষ্যমাত্রা নির্ধারণ করুন। রিপোর্ট পেইজে আপনার বর্তমান খরচ এই বাজেটের কতটুকু পৌঁছেছে তা সরাসরি প্রগ্রেস বারে প্রদর্শিত হবে।
+              </p>
+
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs">৳</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="500"
+                  value={monthlyExpenseBudget || ''}
+                  onChange={e => setMonthlyExpenseBudget(Math.max(0, Number(e.target.value) || 0))}
+                  placeholder="যেমন: ১০০০০ বা ২০০০০..."
+                  className="w-full bg-white border border-rose-300 rounded-xl pl-8 pr-3 py-2 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Quick Preset Buttons for Monthly Budget */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                <span className="text-[10px] text-rose-800 font-bold">কুইক সিলেক্ট:</span>
+                {[5000, 10000, 15000, 20000, 30000, 50000].map(amt => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setMonthlyExpenseBudget(amt)}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                      monthlyExpenseBudget === amt
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-white text-rose-900 border border-rose-200 hover:bg-rose-100'
+                    }`}
+                  >
+                    ৳{amt.toLocaleString('bn-BD')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button
               type="submit"
               className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition cursor-pointer"
@@ -340,6 +397,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
           </div>
+
+          {/* New Account / Switch User Options */}
+          {onOpenAuthModal && (
+            <div className="pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+                <span>একাউন্ট পরিবর্তন বা নতুন সাইন আপ</span>
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenAuthModal('register');
+                  }}
+                  className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-900 text-left transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-1 font-bold text-xs">
+                    <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>নতুন সাইন আপ</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">নতুন দোকান বা খাতা খুলুন</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenAuthModal('login');
+                  }}
+                  className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-900 text-left transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-1 font-bold text-xs">
+                    <LogIn className="w-3.5 h-3.5 text-slate-600" />
+                    <span>অন্য একাউন্টে লগইন</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">অন্য পিন বা আইডি দিয়ে প্রবেশ</p>
+                </button>
+              </div>
+            </div>
+          )}
 
         </div>
 
