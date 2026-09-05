@@ -19,9 +19,10 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
-  CheckCircle2
+  CheckCircle2,
+  Boxes
 } from 'lucide-react';
-import { Customer, Expense, PaymentMethod, Transaction, TransactionType, User } from './types';
+import { Customer, Expense, PaymentMethod, Transaction, TransactionType, User, TransactionItemDetail } from './types';
 import { StorageService } from './services/storageService';
 import { GoogleSheetsService } from './services/googleSheetsService';
 import { Header } from './components/Header';
@@ -41,6 +42,9 @@ import { QRScannerModal } from './components/QRScannerModal';
 import { PWAInstallBanner } from './components/PWAInstallPrompt';
 import { CustomerQRCodeModal } from './components/CustomerQRCodeModal';
 import { TransactionReceiptModal } from './components/TransactionReceiptModal';
+import { CustomerStatementModal } from './components/CustomerStatementModal';
+import { PhoneContactImportModal } from './components/PhoneContactImportModal';
+import { InventoryView } from './components/InventoryView';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -49,7 +53,7 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   
   // Navigation
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'customers' | 'reports'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'customers' | 'inventory' | 'reports'>('dashboard');
   const [isAdminView, setIsAdminView] = useState<boolean>(false);
   const [isModeratorView, setIsModeratorView] = useState<boolean>(false);
   const [moderatorViewTargetId, setModeratorViewTargetId] = useState<string | undefined>(undefined);
@@ -76,6 +80,8 @@ export default function App() {
   const [isVoiceKhataOpen, setIsVoiceKhataOpen] = useState<boolean>(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState<boolean>(false);
   const [viewQrCustomer, setViewQrCustomer] = useState<Customer | null>(null);
+  const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null);
+  const [isPhoneContactModalOpen, setIsPhoneContactModalOpen] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -244,7 +250,8 @@ export default function App() {
     amount: number,
     description: string,
     date?: string,
-    paymentMethod?: PaymentMethod | string
+    paymentMethod?: PaymentMethod | string,
+    items?: TransactionItemDetail[]
   ) => {
     if (!currentUser) return;
 
@@ -256,7 +263,8 @@ export default function App() {
       amount,
       description,
       date,
-      paymentMethod
+      paymentMethod,
+      items
     );
 
     // Refresh state
@@ -483,6 +491,7 @@ export default function App() {
                     pendingCount={pendingCount}
                     onOpenUserSheet={() => setIsUserSheetOpen(true)}
                     onViewReceipt={handleViewReceipt}
+                    onOpenInventory={() => setActiveTab('inventory')}
                   />
                 )}
 
@@ -498,6 +507,17 @@ export default function App() {
                     dueThreshold={currentUser.dueThreshold ?? 2500}
                     onOpenSettings={() => setIsSettingsOpen(true)}
                     onViewQRCode={cust => setViewQrCustomer(cust)}
+                    onViewStatement={cust => setStatementCustomer(cust)}
+                    onOpenPhoneContacts={() => setIsPhoneContactModalOpen(true)}
+                  />
+                )}
+
+                {activeTab === 'inventory' && (
+                  <InventoryView
+                    user={currentUser}
+                    onOpenAddTxWithProduct={() => {
+                      handleOpenAddTx('credit_given');
+                    }}
                   />
                 )}
 
@@ -530,7 +550,7 @@ export default function App() {
             {/* Home Tab */}
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition min-w-[56px] ${
+              className={`flex flex-col items-center py-1 px-2 rounded-xl transition min-w-[50px] ${
                 activeTab === 'dashboard'
                   ? 'text-emerald-700 font-bold'
                   : 'text-slate-500 font-medium'
@@ -543,7 +563,7 @@ export default function App() {
             {/* Customers Tab */}
             <button
               onClick={() => setActiveTab('customers')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition min-w-[56px] ${
+              className={`flex flex-col items-center py-1 px-2 rounded-xl transition min-w-[50px] ${
                 activeTab === 'customers'
                   ? 'text-emerald-700 font-bold'
                   : 'text-slate-500 font-medium'
@@ -566,19 +586,23 @@ export default function App() {
               <Plus className="w-6 h-6" />
             </button>
 
-            {/* Voice Khata Tab */}
+            {/* Inventory Tab */}
             <button
-              onClick={() => setIsVoiceKhataOpen(true)}
-              className="flex flex-col items-center py-1 px-2.5 rounded-xl text-slate-500 hover:text-emerald-700 transition min-w-[56px]"
+              onClick={() => setActiveTab('inventory')}
+              className={`flex flex-col items-center py-1 px-2 rounded-xl transition min-w-[50px] ${
+                activeTab === 'inventory'
+                  ? 'text-emerald-700 font-bold'
+                  : 'text-slate-500 font-medium'
+              }`}
             >
-              <Mic className="w-5 h-5 text-red-500 animate-pulse" />
-              <span className="text-[11px] mt-0.5 font-bold">ভয়েস খাতা</span>
+              <Boxes className="w-5 h-5" />
+              <span className="text-[11px] mt-0.5">ইনভেন্টরি</span>
             </button>
 
             {/* Reports Tab */}
             <button
               onClick={() => setActiveTab('reports')}
-              className={`flex flex-col items-center py-1 px-2.5 rounded-xl transition min-w-[56px] ${
+              className={`flex flex-col items-center py-1 px-2 rounded-xl transition min-w-[50px] ${
                 activeTab === 'reports'
                   ? 'text-emerald-700 font-bold'
                   : 'text-slate-500 font-medium'
@@ -706,6 +730,57 @@ export default function App() {
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-bold text-slate-900 block group-hover:text-blue-800">নতুন কাস্টমার তৈরি (+ কাস্টমার)</span>
                   <span className="text-[10px] text-slate-400">নাম ও ফোন নম্বর দিয়ে নতুন খাতা খুলুন</span>
+                </div>
+              </button>
+
+              {/* ফোনের সেভ থাকা নাম্বার থেকে কাস্টমার */}
+              <button
+                onClick={() => {
+                  setIsPlusMenuOpen(false);
+                  setIsPhoneContactModalOpen(true);
+                }}
+                className="w-full flex items-center gap-3 p-2.5 hover:bg-indigo-50 rounded-xl transition text-left cursor-pointer group border border-dashed border-indigo-200 mt-1"
+              >
+                <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 group-hover:bg-indigo-200">
+                  <Smartphone className="w-4.5 h-4.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-slate-900 block group-hover:text-indigo-800">ফোনবুক থেকে কাস্টমার যোগ</span>
+                  <span className="text-[10px] text-slate-400">ফোনের সেভ করা কন্ট্যাক্টস থেকে এক ক্লিকে</span>
+                </div>
+              </button>
+
+              {/* পণ্য ইনভেন্টরি ও স্টক */}
+              <button
+                onClick={() => {
+                  setIsPlusMenuOpen(false);
+                  setActiveTab('inventory');
+                }}
+                className="w-full flex items-center gap-3 p-2.5 hover:bg-emerald-50 rounded-xl transition text-left cursor-pointer group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-200">
+                  <Boxes className="w-4.5 h-4.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-slate-900 block group-hover:text-emerald-800">পণ্য ইনভেন্টরি ও স্টক ট্র্যাকিং</span>
+                  <span className="text-[10px] text-slate-400">মজুদ পণ্যের তালিকা, স্টক ইন/আউট ও বিক্রি হিসাব</span>
+                </div>
+              </button>
+
+              {/* ভয়েস খাতা */}
+              <button
+                onClick={() => {
+                  setIsPlusMenuOpen(false);
+                  setIsVoiceKhataOpen(true);
+                }}
+                className="w-full flex items-center gap-3 p-2.5 hover:bg-rose-50 rounded-xl transition text-left cursor-pointer group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 group-hover:bg-rose-200">
+                  <Mic className="w-4.5 h-4.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-slate-900 block group-hover:text-rose-800">ভয়েস খাতা (মুখে বলে এন্ট্রি)</span>
+                  <span className="text-[10px] text-slate-400">বাংলায় বলে স্বয়ংক্রিয় হিসাব লিখে ফেলুন</span>
                 </div>
               </button>
             </div>
@@ -858,6 +933,37 @@ export default function App() {
             setIsReceiptModalOpen(false);
             setReceiptTx(null);
             handleOpenAddTx('payment_received', receiptTx.customer.id);
+          }}
+        />
+      )}
+
+      {/* Customer Professional Ledger Statement & PDF Modal */}
+      {statementCustomer && currentUser && (
+        <CustomerStatementModal
+          isOpen={Boolean(statementCustomer)}
+          onClose={() => setStatementCustomer(null)}
+          customer={statementCustomer}
+          transactions={transactions}
+          user={currentUser}
+        />
+      )}
+
+      {/* Phone Contact Import Modal */}
+      {isPhoneContactModalOpen && currentUser && (
+        <PhoneContactImportModal
+          isOpen={isPhoneContactModalOpen}
+          onClose={() => setIsPhoneContactModalOpen(false)}
+          user={currentUser}
+          customers={customers}
+          onCustomerCreated={(newCust) => {
+            StorageService.saveCustomer(newCust);
+            setCustomers(prev => [...prev, newCust]);
+            triggerSync();
+            setSyncNotification({
+              message: `কাস্টমার "${newCust.name}" সফলভাবে কন্ট্যাক্টস থেকে যোগ হয়েছে!`,
+              type: 'success',
+            });
+            setIsPhoneContactModalOpen(false);
           }}
         />
       )}

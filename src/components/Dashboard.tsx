@@ -21,10 +21,13 @@ import {
   X,
   Activity,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Boxes,
+  AlertTriangle
 } from 'lucide-react';
 import { Customer, Transaction, TransactionType, User } from '../types';
 import { formatBanglaPaymentMethod, formatBanglaTxType, GoogleSheetsService } from '../services/googleSheetsService';
+import { StorageService } from '../services/storageService';
 
 const formatRelativeTime = (dateStr: string): string => {
   try {
@@ -70,6 +73,7 @@ interface DashboardProps {
   pendingCount?: number;
   onOpenUserSheet?: () => void;
   onViewReceipt?: (transaction: Transaction) => void;
+  onOpenInventory?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -86,10 +90,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   pendingCount = 0,
   onOpenUserSheet,
   onViewReceipt,
+  onOpenInventory,
 }) => {
   const [filterType, setFilterType] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<string>('');
+
+  // Low stock inventory items
+  const lowStockItems = StorageService.getLowStockItems(user.id);
+  const outOfStockCount = lowStockItems.filter(i => i.currentStock <= 0).length;
 
   // Filter transactions
   const filteredTransactions = transactions.filter(tx => {
@@ -210,6 +219,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>শিট সেটআপ ও ডাটা পাঠান</span>
               <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Low Stock Warning Banner */}
+      {lowStockItems.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300/80 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-start sm:items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h4 className="text-xs sm:text-sm font-black text-amber-950">
+                  ইনভেন্টরি স্টক সতর্কতা ({lowStockItems.length} টি পণ্য)
+                </h4>
+                {outOfStockCount > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 bg-red-600 text-white rounded">
+                    {outOfStockCount} টি স্টক শেষ!
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] sm:text-xs text-amber-800 mt-0.5">
+                {lowStockItems.slice(0, 3).map(i => `${i.name} (${i.currentStock} ${i.unit})`).join(', ')}
+                {lowStockItems.length > 3 ? ` এবং আরও ${lowStockItems.length - 3} টি` : ''} - স্টক ফুরিয়ে যাচ্ছে।
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <button
+              onClick={onOpenInventory}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+            >
+              <Boxes className="w-3.5 h-3.5" />
+              <span>স্টক ইন / রিস্টক করুন</span>
             </button>
           </div>
         </div>

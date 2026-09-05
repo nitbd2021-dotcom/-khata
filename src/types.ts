@@ -61,6 +61,15 @@ export type PaymentMethod =
   | 'other'    // অন্যান্য
   | string;
 
+export interface TransactionItemDetail {
+  itemId: string;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+}
+
 export interface Transaction {
   id: string;
   userId: string;
@@ -74,6 +83,39 @@ export interface Transaction {
   balanceAfter: number;
   syncedToSheet: boolean;
   paymentMethod?: PaymentMethod;
+  items?: TransactionItemDetail[];
+}
+
+export interface InventoryItem {
+  id: string;
+  userId: string;
+  name: string;
+  code?: string;           // বারকোড বা প্রোডাক্ট কোড (যেমন: PRD-101)
+  category?: string;       // ক্যাটাগরি (মুদি, বেকারি, পানীয়, স্ন্যাক্স, প্রসাধন, ইত্যাদি)
+  unit: string;           // একক (পিস, প্যাকেট, কার্টুন, বস্তা, কেজি, লিটার, ইত্যাদি)
+  costPrice?: number;      // ক্রয় বা পাইকারি দর (৳)
+  sellingPrice: number;    // বিক্রয় দর (৳)
+  currentStock: number;    // বর্তমান মজুদ সংখ্যা
+  minStockAlert: number;   // লো-স্টক সতর্কতা সীমা (যেমন: ৫ বা ১০)
+  lastRestockedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockMovementLog {
+  id: string;
+  userId: string;
+  itemId: string;
+  itemName: string;
+  type: 'in' | 'out' | 'adjustment'; // 'in' (মজুদ বৃদ্ধি), 'out' (বিক্রি/বাকি কর্তন), 'adjustment' (সমন্বয়)
+  quantity: number;
+  previousStock: number;
+  newStock: number;
+  relatedTransactionId?: string;
+  relatedCustomerId?: string;
+  relatedCustomerName?: string;
+  note?: string;
+  date: string;
 }
 
 export interface Expense {
@@ -151,4 +193,14 @@ export interface VoiceParseResult {
   typeLabel: string;
   description: string;
   confidence: number;
+}
+
+export interface ModeratorProductTableRow {
+  id: string;
+  productName: string; // প্রথম কলাম: পণ্য এর নাম
+  quantity1: number;   // ২ য় কলাম: পরিমান
+  quantity2: number;   // ৩ য় কলাম: পরিমান
+  unit?: string;       // একক
+  note?: string;       // নোট/মন্তব্য
+  updatedAt?: string;
 }

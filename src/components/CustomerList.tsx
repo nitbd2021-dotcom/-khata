@@ -12,7 +12,9 @@ import {
   AlertTriangle,
   AlertCircle,
   SlidersHorizontal,
-  QrCode
+  QrCode,
+  FileText,
+  Smartphone
 } from 'lucide-react';
 import { Customer } from '../types';
 
@@ -25,6 +27,8 @@ interface CustomerListProps {
   onOpenSettings?: () => void;
   onOpenQRScanner?: () => void;
   onViewQRCode?: (customer: Customer) => void;
+  onViewStatement?: (customer: Customer) => void;
+  onOpenPhoneContacts?: () => void;
 }
 
 export const CustomerList: React.FC<CustomerListProps> = ({
@@ -36,6 +40,8 @@ export const CustomerList: React.FC<CustomerListProps> = ({
   onOpenSettings,
   onOpenQRScanner,
   onViewQRCode,
+  onViewStatement,
+  onOpenPhoneContacts,
 }) => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'receivable' | 'payable' | 'cleared' | 'exceeded'>('all');
@@ -89,10 +95,21 @@ export const CustomerList: React.FC<CustomerListProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {onOpenPhoneContacts && (
+            <button
+              onClick={onOpenPhoneContacts}
+              className="inline-flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold px-3 sm:px-3.5 py-2.5 rounded-xl text-xs sm:text-sm shadow-2xs transition active:scale-95 cursor-pointer"
+              title="ডিএসআর-এর মোবাইলের সেভ থাকা নাম্বার থেকে কাস্টমার যোগ করুন"
+            >
+              <Smartphone className="w-4 h-4 text-indigo-600" />
+              <span>ফোন কন্ট্যাক্টস</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenAddCustomer}
-            className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-sm transition active:scale-95 cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow-sm transition active:scale-95 cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
             <span>+ নতুন কাস্টমার</span>
@@ -431,6 +448,18 @@ export const CustomerList: React.FC<CustomerListProps> = ({
                   </button>
 
                   <div className="flex items-center gap-1.5">
+                    {onViewStatement && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewStatement(customer);
+                        }}
+                        className="p-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 rounded-lg text-xs font-bold transition cursor-pointer border border-slate-200"
+                        title="কাস্টমারের লেজার স্টেটমেন্ট ও PDF ডাউনলোড"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {onViewQRCode && (
                       <button
                         onClick={(e) => {

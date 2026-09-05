@@ -489,3 +489,74 @@ export class BanglaSpeechRecognizer {
     }
   }
 }
+
+/**
+ * Reads text out loud using browser SpeechSynthesis (TTS)
+ */
+export const isSpeechSynthesisSupported = (): boolean => {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+};
+
+export const stopSpeaking = () => {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {
+      // ignore
+    }
+  }
+};
+
+export const speakBanglaText = (
+  text: string,
+  onStart?: () => void,
+  onEnd?: () => void,
+  onError?: (err: any) => void
+): boolean => {
+  if (!isSpeechSynthesisSupported()) {
+    if (onError) onError(new Error('ব্রাউজারে টেক্সট-টু-স্পিচ সুবিধা নেই'));
+    return false;
+  }
+
+  try {
+    stopSpeaking();
+
+    const cleanText = text.trim();
+    if (!cleanText) return false;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'bn-BD';
+    utterance.rate = 0.92; // Natural, clear speaking rate
+    utterance.pitch = 1.0;
+
+    // Detect if Bengali voice is installed in device
+    const voices = window.speechSynthesis.getVoices();
+    const bnVoice = voices.find(v => v.lang === 'bn-BD' || v.lang === 'bn_BD' || v.lang.startsWith('bn'));
+    if (bnVoice) {
+      utterance.voice = bnVoice;
+    }
+
+    utterance.onstart = () => {
+      if (onStart) onStart();
+    };
+
+    utterance.onend = () => {
+      if (onEnd) onEnd();
+    };
+
+    utterance.onerror = (e) => {
+      console.warn('Speech synthesis utterance error:', e);
+      if (onEnd) onEnd();
+      if (onError) onError(e);
+    };
+
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch (err) {
+    console.warn('Failed to synthesize speech:', err);
+    if (onEnd) onEnd();
+    if (onError) onError(err);
+    return false;
+  }
+};
+

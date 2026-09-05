@@ -13,8 +13,8 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onLogout: () => void;
   onOpenAuthModal?: (mode: 'login' | 'register') => void;
-  activeTab: 'dashboard' | 'customers' | 'reports';
-  setActiveTab: (tab: 'dashboard' | 'customers' | 'reports') => void;
+  activeTab: 'dashboard' | 'customers' | 'inventory' | 'reports';
+  setActiveTab: (tab: 'dashboard' | 'customers' | 'inventory' | 'reports') => void;
   onOpenVoiceKhata: () => void;
   onOpenQRScanner?: () => void;
   isRemembered: boolean;
@@ -110,6 +110,16 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 কাস্টমার তালিকা
+              </button>
+              <button
+                onClick={() => setActiveTab('inventory')}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'inventory' && !isAdminView && !isModeratorView
+                    ? 'bg-white text-emerald-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                পণ্য ইনভেন্টরি
               </button>
               <button
                 onClick={() => setActiveTab('reports')}

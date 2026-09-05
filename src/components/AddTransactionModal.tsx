@@ -15,9 +15,13 @@ import {
   Mic,
   MicOff,
   MapPin,
-  Calculator
+  Calculator,
+  Boxes,
+  CheckCircle2,
+  Package,
+  Plus
 } from 'lucide-react';
-import { Customer, PaymentMethod, TransactionType, User } from '../types';
+import { Customer, PaymentMethod, TransactionType, User, TransactionItemDetail } from '../types';
 import { formatBanglaTxType } from '../services/googleSheetsService';
 import { generateId, StorageService } from '../services/storageService';
 import { 
@@ -25,7 +29,13 @@ import {
   parseCustomerVoiceInput, 
   parseSpokenPhoneNumber 
 } from '../services/voiceService';
+import { 
+  isNativeContactPickerSupported, 
+  pickSingleContactFromPhone 
+} from '../services/phoneContactsService';
 import { FloatingCalculator } from './FloatingCalculator';
+import { PhoneContactImportModal } from './PhoneContactImportModal';
+import { ProductPickerModal } from './ProductPickerModal';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -40,7 +50,8 @@ interface AddTransactionModalProps {
     amount: number,
     description: string,
     date?: string,
-    paymentMethod?: PaymentMethod | string
+    paymentMethod?: PaymentMethod | string,
+    items?: TransactionItemDetail[]
   ) => void;
   onAddCustomer: (newCustomer: Customer) => void;
 }
@@ -62,12 +73,39 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [description, setDescription] = useState<string>('');
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
+  // Selected Inventory Products
+  const [selectedProducts, setSelectedProducts] = useState<TransactionItemDetail[]>([]);
+  const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
+
   // New Customer creation state
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newCustAddress, setNewCustAddress] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isPhoneContactModalOpen, setIsPhoneContactModalOpen] = useState(false);
+  const [phoneSuccessMsg, setPhoneSuccessMsg] = useState('');
+
+  // Handle Pick Phone Contact
+  const handlePickPhoneContact = async () => {
+    if (isNativeContactPickerSupported()) {
+      try {
+        const contact = await pickSingleContactFromPhone();
+        if (contact) {
+          if (contact.name) setNewCustName(contact.name);
+          if (contact.phone) setNewCustPhone(contact.phone);
+          if (contact.address) setNewCustAddress(contact.address);
+          setPhoneSuccessMsg(`ফোনবুক থেকে "${contact.name || contact.phone}" সফলভাবে লোড হয়েছে!`);
+          setTimeout(() => setPhoneSuccessMsg(''), 4000);
+        }
+      } catch (err: any) {
+        console.warn('Phone contact picker error:', err);
+        setIsPhoneContactModalOpen(true);
+      }
+    } else {
+      setIsPhoneContactModalOpen(true);
+    }
+  };
 
   // Built-in Floating Calculator State
   const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
@@ -249,6 +287,33 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setErrorMsg('');
   };
 
+    const handleConfirmProducts = (items: TransactionItemDetail[]) => {
+    setSelectedProducts(items);
+    if (items.length > 0) {
+      const sum = items.reduce((s, i) => s + i.totalPrice, 0);
+      setAmountStr(String(sum));
+
+      const summaryText = items.map(i => `${i.itemName} (${i.quantity} ${i.unit} x ৳${i.unitPrice})`).join(', ');
+      if (!description.trim() || description.includes('x ৳')) {
+        setDescription(summaryText);
+      }
+    }
+  };
+
+  const handleRemoveProductItem = (itemId: string) => {
+    const updated = selectedProducts.filter(p => p.itemId !== itemId);
+    setSelectedProducts(updated);
+    if (updated.length > 0) {
+      const sum = updated.reduce((s, i) => s + i.totalPrice, 0);
+      setAmountStr(String(sum));
+      const summaryText = updated.map(i => `${i.itemName} (${i.quantity} ${i.unit} x ৳${i.unitPrice})`).join(', ');
+      setDescription(summaryText);
+    } else {
+      setAmountStr('');
+      setDescription('');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomerId) {
@@ -266,13 +331,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       amount,
       description,
       new Date(date).toISOString(),
-      paymentMethod
+      paymentMethod,
+      selectedProducts.length > 0 ? selectedProducts : undefined
     );
 
     // Reset & close
     setAmountStr('');
     setPaymentMethod('cash');
     setDescription('');
+    setSelectedProducts([]);
     setErrorMsg('');
     onClose();
   };
@@ -414,6 +481,34 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     {StorageService.generateNextCustomerCode(customers)}
                   </span>
                 </div>
+
+                {/* 1. Phone Contacts Import Option (DSR Phonebook integration) */}
+                <div className="bg-gradient-to-r from-indigo-50 to-white p-2.5 rounded-xl border border-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 block">ফোনে থাকা নাম্বার থেকে কাস্টমার</span>
+                      <span className="text-[10px] text-slate-500 block">DSR-এর ফোনের সেভ কন্ট্যাক্টস বা কল লগ</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePickPhoneContact}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs active:scale-95"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 text-indigo-200" />
+                    <span>ফোনবুক থেকে নিন</span>
+                  </button>
+                </div>
+
+                {phoneSuccessMsg && (
+                  <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-1.5 animate-fadeIn">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{phoneSuccessMsg}</span>
+                  </div>
+                )}
 
                 {/* Combined Smart Voice Button */}
                 <div className="bg-white p-2.5 rounded-xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
@@ -651,6 +746,84 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </select>
             )}
           </div>
+
+          {/* Product Inventory Stock Selector (For Credit Sales & Products) */}
+          {(type === 'credit_given' || type === 'sale' || type === 'loan_given') && (
+            <div className="bg-emerald-50/50 border border-emerald-200/90 rounded-2xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Boxes className="w-4 h-4 text-emerald-700" />
+                  <span className="text-xs font-bold text-slate-800">
+                    স্টক থেকে পণ্য নির্বাচন
+                  </span>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
+                    অটো স্টক কর্তন
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsProductPickerOpen(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{selectedProducts.length > 0 ? 'পণ্য পরিবর্তন (+)' : 'স্টক থেকে পণ্য যোগ'}</span>
+                </button>
+              </div>
+
+              {selectedProducts.length > 0 ? (
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-[11px] font-semibold text-slate-500 flex justify-between px-1">
+                    <span>নির্বাচিত পণ্যসমূহ ({selectedProducts.length} টি)</span>
+                    <span className="text-emerald-700 font-bold">মোট: ৳{selectedProducts.reduce((s, p) => s + p.totalPrice, 0).toLocaleString('bn-BD')}</span>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden text-xs">
+                    {selectedProducts.map((p, idx) => (
+                      <div key={p.itemId + idx} className="p-2.5 flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <span className="font-bold text-slate-800 block truncate">{p.itemName}</span>
+                          <span className="text-[11px] text-slate-500">
+                            {p.quantity} {p.unit} x ৳{p.unitPrice}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-emerald-700 whitespace-nowrap">
+                            = ৳{p.totalPrice.toLocaleString('bn-BD')}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProductItem(p.itemId)}
+                            className="w-5 h-5 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-600 flex items-center justify-center transition cursor-pointer"
+                            title="বাদ দিন"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-[10px] text-emerald-700 flex items-center gap-1 font-medium">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span>লেনদেন সেভ করলে উক্ত পণ্যগুলো আপনার ইনভেন্টরি স্টক থেকে বাদ যাবে।</span>
+                  </p>
+                </div>
+              ) : (
+                <div 
+                  onClick={() => setIsProductPickerOpen(true)}
+                  className="p-2.5 rounded-xl border border-dashed border-emerald-300 bg-white hover:bg-emerald-50/50 flex items-center justify-between text-xs text-slate-600 cursor-pointer transition"
+                >
+                  <span className="text-[11px] text-slate-500">
+                    বাকি বিক্রির মালামাল স্টক থেকে স্বয়ংক্রিয়ভাবে কমাতে পণ্য বাছুন...
+                  </span>
+                  <span className="text-emerald-700 font-bold whitespace-nowrap ml-2 text-xs">
+                    + পণ্য বাছুন
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Large Amount Display */}
           <div className="bg-slate-900 rounded-2xl p-4 text-center text-white shadow-inner relative">
@@ -940,6 +1113,33 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         }}
         initialValue={parseFloat(amountStr) || 0}
       />
+
+      {/* Phone Contact Import Modal */}
+      {isPhoneContactModalOpen && (
+        <PhoneContactImportModal
+          isOpen={isPhoneContactModalOpen}
+          onClose={() => setIsPhoneContactModalOpen(false)}
+          user={user}
+          customers={customers}
+          onCustomerCreated={(newCust) => {
+            onAddCustomer(newCust);
+            setSelectedCustomerId(newCust.id);
+            setIsCreatingCustomer(false);
+            setIsPhoneContactModalOpen(false);
+          }}
+        />
+      )}
+
+      {/* Product Inventory Picker Modal */}
+      {isProductPickerOpen && (
+        <ProductPickerModal
+          isOpen={isProductPickerOpen}
+          onClose={() => setIsProductPickerOpen(false)}
+          user={user}
+          initialSelectedItems={selectedProducts}
+          onConfirm={handleConfirmProducts}
+        />
+      )}
     </div>
   );
 };

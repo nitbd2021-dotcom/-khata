@@ -1,11 +1,27 @@
-import { Customer, DeviceSession, Expense, PaymentMethod, Transaction, TransactionType, User, AdminUserRecord } from '../types';
+import { 
+  Customer, 
+  DeviceSession, 
+  Expense, 
+  PaymentMethod, 
+  Transaction, 
+  TransactionType, 
+  User, 
+  AdminUserRecord,
+  InventoryItem,
+  StockMovementLog,
+  TransactionItemDetail,
+  ModeratorProductTableRow
+} from '../types';
 
 const STORAGE_USERS_KEY = 'khata_plus_users';
 const STORAGE_CUSTOMERS_KEY = 'khata_plus_customers';
 const STORAGE_TRANSACTIONS_KEY = 'khata_plus_transactions';
 const STORAGE_EXPENSES_KEY = 'khata_plus_expenses';
+const STORAGE_INVENTORY_KEY = 'khata_plus_inventory';
+const STORAGE_STOCK_LOGS_KEY = 'khata_plus_stock_logs';
 const STORAGE_DEVICE_KEY = 'khata_plus_device_session';
 const STORAGE_CURRENT_USER_KEY = 'khata_plus_current_user_id';
+const STORAGE_MODERATOR_PROD_TABLE_PREFIX = 'khata_plus_mod_prod_table_';
 export const ADMIN_EMAIL = 'jahidulraju87@gmail.com';
 export const ADMIN_PASSWORD = 'raju12158A+';
 const STORAGE_ADMIN_PIN = '7860'; // Alternative Master Admin PIN
@@ -427,6 +443,117 @@ const seedInitialData = () => {
   localStorage.setItem(STORAGE_EXPENSES_KEY, JSON.stringify(initialExpenses));
   localStorage.setItem(STORAGE_CURRENT_USER_KEY, defaultUser.id);
   
+  if (!localStorage.getItem(STORAGE_INVENTORY_KEY)) {
+    const demoInventory: InventoryItem[] = [
+      {
+        id: 'prd-demo-1',
+        userId: defaultUser.id,
+        name: 'প্রাণ পটেটো ক্র্যাকার্স (৫০ গ্রাম)',
+        code: 'PRD-101',
+        category: 'স্ন্যাক্স ও চিপস',
+        unit: 'প্যাকেট',
+        costPrice: 12,
+        sellingPrice: 15,
+        currentStock: 60,
+        minStockAlert: 10,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      },
+      {
+        id: 'prd-demo-2',
+        userId: defaultUser.id,
+        name: 'লাক্স বিউটি সোপ (১০০ গ্রাম)',
+        code: 'PRD-102',
+        category: 'কসমেটিকস ও সাবান',
+        unit: 'পিস',
+        costPrice: 52,
+        sellingPrice: 60,
+        currentStock: 35,
+        minStockAlert: 8,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+      },
+      {
+        id: 'prd-demo-3',
+        userId: defaultUser.id,
+        name: 'বসুন্ধরা সয়াবিন তেল (১ লিটার)',
+        code: 'PRD-103',
+        category: 'ভোজ্যতেল',
+        unit: 'বোতল',
+        costPrice: 175,
+        sellingPrice: 185,
+        currentStock: 25,
+        minStockAlert: 5,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      },
+      {
+        id: 'prd-demo-4',
+        userId: defaultUser.id,
+        name: 'মিনিকেট প্রিমিয়াম চাল (৫০ কেজি বস্তা)',
+        code: 'PRD-104',
+        category: 'চাল ও খাদ্যশস্য',
+        unit: 'বস্তা',
+        costPrice: 3250,
+        sellingPrice: 3500,
+        currentStock: 8,
+        minStockAlert: 5,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 6).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+      },
+      {
+        id: 'prd-demo-5',
+        userId: defaultUser.id,
+        name: 'কোকা-কোলা (৫০০ মি.লি.)',
+        code: 'PRD-105',
+        category: 'পানীয় ও বেভারেজ',
+        unit: 'বোতল',
+        costPrice: 38,
+        sellingPrice: 45,
+        currentStock: 40,
+        minStockAlert: 12,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+      },
+      {
+        id: 'prd-demo-6',
+        userId: defaultUser.id,
+        name: 'ম্যাগি ২-মিনিট নুডলস (৮ প্যাক)',
+        code: 'PRD-106',
+        category: 'নুডলস ও পাস্তা',
+        unit: 'প্যাকেট',
+        costPrice: 105,
+        sellingPrice: 120,
+        currentStock: 4,
+        minStockAlert: 6,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 6).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+      },
+      {
+        id: 'prd-demo-7',
+        userId: defaultUser.id,
+        name: 'হুইল ওয়াশিং পাউডার (৫০০ গ্রাম)',
+        code: 'PRD-107',
+        category: 'ডিটারজেন্ট ও ক্লিনার',
+        unit: 'প্যাকেট',
+        costPrice: 60,
+        sellingPrice: 70,
+        currentStock: 30,
+        minStockAlert: 10,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      }
+    ];
+    localStorage.setItem(STORAGE_INVENTORY_KEY, JSON.stringify(demoInventory));
+  }
+  
   // Save device session so user is remembered
   const deviceSession: DeviceSession = {
     deviceId: 'dev-' + Math.random().toString(36).substring(2, 9),
@@ -829,7 +956,8 @@ export const StorageService = {
     amount: number,
     description: string,
     date?: string,
-    paymentMethod?: PaymentMethod | string
+    paymentMethod?: PaymentMethod | string,
+    items?: TransactionItemDetail[]
   ): Transaction => {
     const customers = StorageService.getCustomers(userId);
     const customer = customers.find(c => c.id === customerId);
@@ -881,6 +1009,7 @@ export const StorageService = {
       balanceAfter: customer.netBalance,
       syncedToSheet: isOnlineNow,
       paymentMethod: (paymentMethod as PaymentMethod) || 'cash',
+      items: items && items.length > 0 ? items : undefined,
     };
 
     const raw = localStorage.getItem(STORAGE_TRANSACTIONS_KEY);
@@ -888,7 +1017,291 @@ export const StorageService = {
     all.push(newTx);
     localStorage.setItem(STORAGE_TRANSACTIONS_KEY, JSON.stringify(all));
 
+    // Deduct items from inventory stock if provided and transaction type is credit_given, sale, or loan_given
+    if (items && items.length > 0 && (type === 'credit_given' || type === 'sale' || type === 'loan_given')) {
+      try {
+        StorageService.deductStockForTransaction(
+          userId,
+          items,
+          newTx.id,
+          customer.id,
+          customer.name,
+          type
+        );
+      } catch (err) {
+        console.warn('Failed to auto-deduct stock for transaction:', err);
+      }
+    }
+
     return newTx;
+  },
+
+  // Inventory (DSR Product Stock Tracking)
+  getInventory: (userId: string): InventoryItem[] => {
+    const raw = localStorage.getItem(STORAGE_INVENTORY_KEY);
+    const all: InventoryItem[] = raw ? JSON.parse(raw) : [];
+    const userItems = all.filter(item => item.userId === userId);
+
+    // If user has no items yet and is a demo user, seed default sample inventory
+    if (userItems.length === 0 && (userId === 'user-demo-1' || userId.includes('demo'))) {
+      const seeded = StorageService.seedSampleInventory(userId);
+      return seeded;
+    }
+
+    return userItems.sort((a, b) => a.name.localeCompare(b.name, 'bn'));
+  },
+
+  saveInventoryItem: (item: InventoryItem): void => {
+    const raw = localStorage.getItem(STORAGE_INVENTORY_KEY);
+    const all: InventoryItem[] = raw ? JSON.parse(raw) : [];
+    const idx = all.findIndex(i => i.id === item.id);
+    item.updatedAt = new Date().toISOString();
+    if (idx >= 0) {
+      all[idx] = item;
+    } else {
+      all.push(item);
+    }
+    localStorage.setItem(STORAGE_INVENTORY_KEY, JSON.stringify(all));
+  },
+
+  deleteInventoryItem: (userId: string, itemId: string): void => {
+    const raw = localStorage.getItem(STORAGE_INVENTORY_KEY);
+    if (!raw) return;
+    const all: InventoryItem[] = JSON.parse(raw);
+    const filtered = all.filter(i => !(i.userId === userId && i.id === itemId));
+    localStorage.setItem(STORAGE_INVENTORY_KEY, JSON.stringify(filtered));
+  },
+
+  adjustStock: (
+    userId: string,
+    itemId: string,
+    quantity: number,
+    type: 'in' | 'out' | 'adjustment',
+    note?: string,
+    relatedTxId?: string,
+    relatedCustId?: string,
+    relatedCustName?: string
+  ): { success: boolean; newStock: number; error?: string } => {
+    const raw = localStorage.getItem(STORAGE_INVENTORY_KEY);
+    const all: InventoryItem[] = raw ? JSON.parse(raw) : [];
+    const item = all.find(i => i.userId === userId && i.id === itemId);
+    if (!item) {
+      return { success: false, newStock: 0, error: 'পণ্য খুঁজে পাওয়া যায়নি' };
+    }
+
+    const previousStock = Number(item.currentStock) || 0;
+    const qty = Math.max(0, Number(quantity));
+    let newStock = previousStock;
+
+    if (type === 'in') {
+      newStock = previousStock + qty;
+      item.lastRestockedAt = new Date().toISOString();
+    } else if (type === 'out') {
+      newStock = Math.max(0, previousStock - qty);
+    } else if (type === 'adjustment') {
+      newStock = qty; // In direct adjustment, qty is the new absolute physical count
+    }
+
+    item.currentStock = newStock;
+    item.updatedAt = new Date().toISOString();
+
+    // Save updated inventory
+    localStorage.setItem(STORAGE_INVENTORY_KEY, JSON.stringify(all));
+
+    // Record Stock Movement Log
+    const logsRaw = localStorage.getItem(STORAGE_STOCK_LOGS_KEY);
+    const logs: StockMovementLog[] = logsRaw ? JSON.parse(logsRaw) : [];
+    const newLog: StockMovementLog = {
+      id: generateId(),
+      userId,
+      itemId: item.id,
+      itemName: item.name,
+      type,
+      quantity: type === 'adjustment' ? Math.abs(newStock - previousStock) : qty,
+      previousStock,
+      newStock,
+      relatedTransactionId: relatedTxId,
+      relatedCustomerId: relatedCustId,
+      relatedCustomerName: relatedCustName,
+      note: note || (type === 'in' ? 'স্টক বৃদ্ধি / রিস্টক' : type === 'out' ? 'পণ্য বিক্রি / স্টক কর্তন' : 'স্টক সমন্বয়'),
+      date: new Date().toISOString(),
+    };
+    logs.unshift(newLog);
+    // Keep last 1000 logs
+    if (logs.length > 1000) logs.length = 1000;
+    localStorage.setItem(STORAGE_STOCK_LOGS_KEY, JSON.stringify(logs));
+
+    return { success: true, newStock };
+  },
+
+  deductStockForTransaction: (
+    userId: string,
+    items: TransactionItemDetail[],
+    txId: string,
+    customerId: string,
+    customerName: string,
+    txType: TransactionType
+  ): void => {
+    items.forEach(it => {
+      StorageService.adjustStock(
+        userId,
+        it.itemId,
+        it.quantity,
+        'out',
+        `${getDefaultDescription(txType)}: ${customerName} (${it.quantity} ${it.unit} x ৳${it.unitPrice})`,
+        txId,
+        customerId,
+        customerName
+      );
+    });
+  },
+
+  getStockLogs: (userId: string, itemId?: string): StockMovementLog[] => {
+    const raw = localStorage.getItem(STORAGE_STOCK_LOGS_KEY);
+    const all: StockMovementLog[] = raw ? JSON.parse(raw) : [];
+    return all
+      .filter(l => l.userId === userId && (!itemId || l.itemId === itemId))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  },
+
+  seedSampleInventory: (userId: string): InventoryItem[] => {
+    const raw = localStorage.getItem(STORAGE_INVENTORY_KEY);
+    const all: InventoryItem[] = raw ? JSON.parse(raw) : [];
+    
+    // Remove existing items for this user to avoid duplicates if re-seeding
+    const filtered = all.filter(i => i.userId !== userId);
+    const newItems: InventoryItem[] = [
+      {
+        id: generateId(),
+        userId,
+        name: 'প্রাণ পটেটো ক্র্যাকার্স (৫০ গ্রাম)',
+        code: 'PRD-101',
+        category: 'স্ন্যাক্স ও চিপস',
+        unit: 'প্যাকেট',
+        costPrice: 12,
+        sellingPrice: 15,
+        currentStock: 60,
+        minStockAlert: 10,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      },
+      {
+        id: generateId(),
+        userId,
+        name: 'লাক্স বিউটি সোপ (১০০ গ্রাম)',
+        code: 'PRD-102',
+        category: 'কসমেটিকস ও সাবান',
+        unit: 'পিস',
+        costPrice: 52,
+        sellingPrice: 60,
+        currentStock: 35,
+        minStockAlert: 8,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+      },
+      {
+        id: generateId(),
+        userId,
+        name: 'বসুন্ধরা সয়াবিন তেল (১ লিটার)',
+        code: 'PRD-103',
+        category: 'ভোজ্যতেল',
+        unit: 'বোতল',
+        costPrice: 175,
+        sellingPrice: 185,
+        currentStock: 25,
+        minStockAlert: 5,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      },
+      {
+        id: generateId(),
+        userId,
+        name: 'মিনিকেট প্রিমিয়াম চাল (৫০ কেজি বস্তা)',
+        code: 'PRD-104',
+        category: 'চাল ও খাদ্যশস্য',
+        unit: 'বস্তা',
+        costPrice: 3250,
+        sellingPrice: 3500,
+        currentStock: 8,
+        minStockAlert: 5,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 6).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+      },
+      {
+        id: generateId(),
+        userId,
+        name: 'কোকা-কোলা (৫০০ মি.লি.)',
+        code: 'PRD-105',
+        category: 'পানীয় ও বেভারেজ',
+        unit: 'বোতল',
+        costPrice: 38,
+        sellingPrice: 45,
+        currentStock: 40,
+        minStockAlert: 12,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+      },
+      {
+        id: generateId(),
+        userId,
+        name: 'ম্যাগি ২-মিনিট নুডলস (৮ প্যাক)',
+        code: 'PRD-106',
+        category: 'নুডলস ও পাস্তা',
+        unit: 'প্যাকেট',
+        costPrice: 105,
+        sellingPrice: 120,
+        currentStock: 4,
+        minStockAlert: 6,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 6).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+      },
+      {
+        id: generateId(),
+        userId,
+        name: 'হুইল ওয়াশিং পাউডার (৫০০ গ্রাম)',
+        code: 'PRD-107',
+        category: 'ডিটারজেন্ট ও ক্লিনার',
+        unit: 'প্যাকেট',
+        costPrice: 60,
+        sellingPrice: 70,
+        currentStock: 30,
+        minStockAlert: 10,
+        lastRestockedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      }
+    ];
+
+    localStorage.setItem(STORAGE_INVENTORY_KEY, JSON.stringify([...filtered, ...newItems]));
+    return newItems;
+  },
+
+  getInventorySummary: (userId: string) => {
+    const items = StorageService.getInventory(userId);
+    const totalItems = items.length;
+    const totalStockQuantity = items.reduce((sum, i) => sum + (Number(i.currentStock) || 0), 0);
+    const totalStockValue = items.reduce((sum, i) => sum + ((Number(i.currentStock) || 0) * (Number(i.sellingPrice) || 0)), 0);
+    const lowStockCount = items.filter(i => (Number(i.currentStock) || 0) <= (Number(i.minStockAlert) || 5) && (Number(i.currentStock) || 0) > 0).length;
+    const outOfStockCount = items.filter(i => (Number(i.currentStock) || 0) === 0).length;
+
+    return {
+      totalItems,
+      totalStockQuantity,
+      totalStockValue,
+      lowStockCount,
+      outOfStockCount
+    };
+  },
+
+  getLowStockItems: (userId: string): InventoryItem[] => {
+    const items = StorageService.getInventory(userId);
+    return items.filter(i => (Number(i.currentStock) || 0) <= (Number(i.minStockAlert) || 5));
   },
 
   // Mark transactions as synced to Google Sheet
@@ -1347,6 +1760,18 @@ export const StorageService = {
     return true;
   },
 
+  // Update Customer Private Internal Note (Set by DSR / Owner)
+  updateCustomerNote: (customerId: string, note: string): boolean => {
+    const raw = localStorage.getItem(STORAGE_CUSTOMERS_KEY);
+    if (!raw) return false;
+    const all: Customer[] = JSON.parse(raw);
+    const idx = all.findIndex(c => c.id === customerId);
+    if (idx === -1) return false;
+    all[idx].note = note.trim();
+    localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.stringify(all));
+    return true;
+  },
+
   // Toggle DSR Credit Lock / Status (Set by Moderator)
   toggleDsrCreditLock: (dsrUserId: string): { success: boolean; isLocked: boolean; message: string } => {
     const users = StorageService.getAllUsers();
@@ -1406,6 +1831,96 @@ export const StorageService = {
   checkAdminPin: (pin: string): boolean => {
     const trimmed = pin.trim();
     return trimmed === ADMIN_PASSWORD || trimmed === STORAGE_ADMIN_PIN || trimmed === '7860';
+  },
+
+  // Moderator Product Quantity & Sum Table (১ম কলাম: পণ্য এর নাম, ২য় কলাম: পরিমান, ৩য় কলাম: পরিমান, ৪র্থ কলাম: ২+৩ যোগফল)
+  getModeratorProductTable: (moderatorId: string): ModeratorProductTableRow[] => {
+    const key = `${STORAGE_MODERATOR_PROD_TABLE_PREFIX}${moderatorId}`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.warn('Failed to parse moderator product table', e);
+      }
+    }
+
+    // Default pre-populated sample rows
+    const initialRows: ModeratorProductTableRow[] = [
+      {
+        id: 'mpt-1',
+        productName: 'মিনিকেট চাল (৫০ কেজি বস্তা)',
+        quantity1: 10,
+        quantity2: 5,
+        unit: 'বস্তা',
+        note: 'সকাল ও দুপুরের সরবরাহ'
+      },
+      {
+        id: 'mpt-2',
+        productName: 'তীর সয়াবিন তেল (৫ লিটার)',
+        quantity1: 20,
+        quantity2: 12,
+        unit: 'বোতল',
+        note: '১ম ও ২য় লট চালান'
+      },
+      {
+        id: 'mpt-3',
+        productName: 'প্রাণ পটেটো ক্র্যাকার্স (৫০ গ্রাম)',
+        quantity1: 50,
+        quantity2: 30,
+        unit: 'প্যাকেট',
+        note: 'দোকান অর্ডার ১ ও ২'
+      },
+      {
+        id: 'mpt-4',
+        productName: 'লাক্স বিউটি সোপ (১০০ গ্রাম)',
+        quantity1: 35,
+        quantity2: 15,
+        unit: 'পিস',
+        note: 'সকালের স্টক ও অতিরিক্ত'
+      },
+      {
+        id: 'mpt-5',
+        productName: 'কোকা-কোলা (৫০০ মি.লি.)',
+        quantity1: 24,
+        quantity2: 36,
+        unit: 'বোতল',
+        note: 'ডেলিভারি লট ১ ও ২'
+      },
+      {
+        id: 'mpt-6',
+        productName: 'ম্যাগি ২-মিনিট নুডলস',
+        quantity1: 18,
+        quantity2: 22,
+        unit: 'প্যাকেট',
+        note: 'নিয়মিত ও স্পেশাল অর্ডার'
+      },
+      {
+        id: 'mpt-7',
+        productName: 'হুইল ওয়াশিং পাউডার (৫০০ গ্রাম)',
+        quantity1: 25,
+        quantity2: 15,
+        unit: 'প্যাকেট',
+        note: 'বিতরণ চালান ১ ও ২'
+      }
+    ];
+
+    localStorage.setItem(key, JSON.stringify(initialRows));
+    return initialRows;
+  },
+
+  saveModeratorProductTable: (moderatorId: string, rows: ModeratorProductTableRow[]): void => {
+    const key = `${STORAGE_MODERATOR_PROD_TABLE_PREFIX}${moderatorId}`;
+    localStorage.setItem(key, JSON.stringify(rows));
+  },
+
+  resetModeratorProductTable: (moderatorId: string): ModeratorProductTableRow[] => {
+    const key = `${STORAGE_MODERATOR_PROD_TABLE_PREFIX}${moderatorId}`;
+    localStorage.removeItem(key);
+    return StorageService.getModeratorProductTable(moderatorId);
   }
 };
 
