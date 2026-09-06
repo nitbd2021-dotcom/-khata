@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowDownLeft, 
@@ -23,11 +23,79 @@ import {
   Clock,
   ChevronRight,
   Boxes,
-  AlertTriangle
+  AlertTriangle,
+  TrendingUp
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend
+} from 'recharts';
 import { Customer, Transaction, TransactionType, User } from '../types';
 import { formatBanglaPaymentMethod, formatBanglaTxType, GoogleSheetsService } from '../services/googleSheetsService';
 import { StorageService } from '../services/storageService';
+
+interface CustomChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    dataKey: string;
+    value: number;
+    color: string;
+    name: string;
+    payload: {
+      dayName: string;
+      dateLabel: string;
+      received: number;
+      credit: number;
+      total: number;
+    };
+  }>;
+  label?: string;
+}
+
+const CustomChartTooltip: React.FC<CustomChartTooltipProps> = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const dataItem = payload[0]?.payload;
+    const receivedVal = payload.find(p => p.dataKey === 'received')?.value || 0;
+    const creditVal = payload.find(p => p.dataKey === 'credit')?.value || 0;
+    const totalVal = Number(receivedVal) + Number(creditVal);
+
+    return (
+      <div className="bg-slate-900 text-white p-3 rounded-2xl shadow-xl text-xs border border-slate-700 min-w-[190px]">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+          <span className="font-bold text-slate-200">{label}</span>
+          <span className="text-[11px] text-slate-400 font-medium">{dataItem?.dateLabel}</span>
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-3 text-emerald-400">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              জমা আদায়:
+            </span>
+            <span className="font-bold">৳ {Number(receivedVal).toLocaleString('bn-BD')}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-rose-400">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-rose-400"></span>
+              বাকি বিক্রি:
+            </span>
+            <span className="font-bold">৳ {Number(creditVal).toLocaleString('bn-BD')}</span>
+          </div>
+          <div className="pt-1.5 mt-1 border-t border-slate-800 flex items-center justify-between text-slate-200 font-bold">
+            <span className="text-slate-400">মোট লেনদেন:</span>
+            <span>৳ {totalVal.toLocaleString('bn-BD')}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 const formatRelativeTime = (dateStr: string): string => {
   try {
@@ -99,6 +167,71 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Low stock inventory items
   const lowStockItems = StorageService.getLowStockItems(user.id);
   const outOfStockCount = lowStockItems.filter(i => i.currentStock <= 0).length;
+
+  // Weekly Transaction Trends calculation for Recharts line chart
+  const { weeklyTrendData, weeklyTotals } = useMemo(() => {
+    const banglaDayNames = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'];
+    const banglaMonths = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+    const map: { [key: string]: { dayName: string; dateLabel: string; received: number; credit: number; total: number } } = {};
+    const dateKeys: string[] = [];
+
+    // Rolling 7 days: from 6 days ago up to today
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateKey = `${yyyy}-${mm}-${dd}`;
+      
+      const dayName = banglaDayNames[d.getDay()];
+      const dateLabel = `${d.getDate().toLocaleString('bn-BD')} ${banglaMonths[d.getMonth()]}`;
+
+      map[dateKey] = {
+        dayName,
+        dateLabel,
+        received: 0,
+        credit: 0,
+        total: 0,
+      };
+      dateKeys.push(dateKey);
+    }
+
+    let totReceived = 0;
+    let totCredit = 0;
+
+    transactions.forEach(tx => {
+      try {
+        const txDate = new Date(tx.date);
+        const yyyy = txDate.getFullYear();
+        const mm = String(txDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(txDate.getDate()).padStart(2, '0');
+        const key = `${yyyy}-${mm}-${dd}`;
+
+        if (map[key]) {
+          if (tx.type === 'payment_received') {
+            map[key].received += tx.amount;
+            totReceived += tx.amount;
+          } else if (tx.type === 'credit_given') {
+            map[key].credit += tx.amount;
+            totCredit += tx.amount;
+          }
+          map[key].total += tx.amount;
+        }
+      } catch {
+        // Ignore date parsing error
+      }
+    });
+
+    return {
+      weeklyTrendData: dateKeys.map(k => map[k]),
+      weeklyTotals: {
+        received: totReceived,
+        credit: totCredit,
+        total: totReceived + totCredit,
+      },
+    };
+  }, [transactions]);
 
   // Filter transactions
   const filteredTransactions = transactions.filter(tx => {
@@ -262,7 +395,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {/* Primary Action Buttons: দ্রুত লেনদেন এন্ট্রি (Top Priority for Instant Access) */}
-      <div className="bg-white rounded-2xl p-3.5 sm:p-5 border border-slate-200 shadow-xs">
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="bg-white rounded-2xl p-3.5 sm:p-5 border border-slate-200 shadow-xs"
+      >
         <div className="flex items-center justify-between mb-2.5 sm:mb-3 gap-2 flex-wrap">
           <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <Plus className="w-4 h-4 text-emerald-600" />
@@ -324,13 +462,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </button>
 
         </div>
-      </div>
+      </motion.div>
 
-      {/* Main Metric Cards: মোট পাওনা & মোট দেনা */}
+      {/* Main Metric Cards with Framer Motion Entrance Animations (Fade-in, Slide-up) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         
         {/* মোট পাওনা (Receivable) */}
-        <div className="bg-white p-3 sm:p-5 rounded-2xl border border-red-100 shadow-xs relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.38, delay: 0.05, ease: 'easeOut' }}
+          whileHover={{ y: -2, transition: { duration: 0.15 } }}
+          className="bg-white p-3 sm:p-5 rounded-2xl border border-red-100 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden"
+        >
           <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-sm font-semibold mb-0.5 sm:mb-1">
             <span className="truncate">মোট পাওনা (বাকি)</span>
             <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
@@ -341,10 +485,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate">
             কাস্টমারদের কাছে পাবেন
           </p>
-        </div>
+        </motion.div>
 
         {/* মোট দেনা (Payable) */}
-        <div className="bg-white p-3 sm:p-5 rounded-2xl border border-blue-100 shadow-xs relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.38, delay: 0.1, ease: 'easeOut' }}
+          whileHover={{ y: -2, transition: { duration: 0.15 } }}
+          className="bg-white p-3 sm:p-5 rounded-2xl border border-blue-100 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden"
+        >
           <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-sm font-semibold mb-0.5 sm:mb-1">
             <span className="truncate">মোট দেনা (দিতে হবে)</span>
             <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
@@ -355,10 +505,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate">
             মহাজন বা অন্যদের দিতে হবে
           </p>
-        </div>
+        </motion.div>
 
         {/* আজকের নগদ জমা */}
-        <div className="bg-white p-3 sm:p-5 rounded-2xl border border-emerald-100 shadow-xs relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.38, delay: 0.15, ease: 'easeOut' }}
+          whileHover={{ y: -2, transition: { duration: 0.15 } }}
+          className="bg-white p-3 sm:p-5 rounded-2xl border border-emerald-100 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden"
+        >
           <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-sm font-semibold mb-0.5 sm:mb-1">
             <span className="truncate">আজকের জমা (ক্যাশ)</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
@@ -369,10 +525,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 sm:mt-1 truncate">
             আজ নগদ আদায় ও জমা
           </p>
-        </div>
+        </motion.div>
 
         {/* আজকের খরচ */}
-        <div className="bg-white p-3 sm:p-5 rounded-2xl border border-amber-100 shadow-xs relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.38, delay: 0.2, ease: 'easeOut' }}
+          whileHover={{ y: -2, transition: { duration: 0.15 } }}
+          className="bg-white p-3 sm:p-5 rounded-2xl border border-amber-100 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden"
+        >
           <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-sm font-semibold mb-0.5 sm:mb-1">
             <span className="truncate">আজকের খরচ</span>
             <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
@@ -389,9 +551,102 @@ export const Dashboard: React.FC<DashboardProps> = ({
               + খরচ
             </button>
           </div>
-        </div>
+        </motion.div>
 
       </div>
+
+      {/* Weekly Transaction Trends & Growth Line Chart (Recharts) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.42, delay: 0.25, ease: 'easeOut' }}
+        className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 overflow-hidden"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm sm:text-base text-slate-900">
+                  সাপ্তাহিক লেনদেন ট্রেন্ড ও প্রবৃদ্ধি
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800">
+                  গত ৭ দিন
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                দৈনিক নগদ জমা আদায় ও বাকি বিক্রির প্রবৃদ্ধির গ্রাফ
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Summary Badges */}
+          <div className="flex items-center gap-2 flex-wrap text-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+              <span>মোট জমা: ৳ {weeklyTotals.received.toLocaleString('bn-BD')}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 font-bold">
+              <span className="w-2 h-2 rounded-full bg-rose-600"></span>
+              <span>মোট বাকি: ৳ {weeklyTotals.credit.toLocaleString('bn-BD')}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Recharts LineChart */}
+        <div className="w-full h-64 sm:h-72 mt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={weeklyTrendData}
+              margin={{ top: 12, right: 12, left: -8, bottom: 4 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis
+                dataKey="dayName"
+                tick={{ fontSize: 11, fill: '#64748b' }}
+                axisLine={{ stroke: '#e2e8f0' }}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: '#64748b' }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(val: number) => `৳${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
+              />
+              <Tooltip content={<CustomChartTooltip />} />
+              <Legend
+                verticalAlign="top"
+                align="right"
+                iconType="circle"
+                wrapperStyle={{ paddingBottom: 12, fontSize: 12 }}
+                formatter={(value: string) => (
+                  <span className="text-xs font-semibold text-slate-700">{value}</span>
+                )}
+              />
+              <Line
+                type="monotone"
+                dataKey="received"
+                name="জমা আদায় (৳)"
+                stroke="#059669"
+                strokeWidth={2.5}
+                dot={{ r: 3.5, fill: '#059669', strokeWidth: 2, stroke: '#ffffff' }}
+                activeDot={{ r: 6, stroke: '#059669', strokeWidth: 2, fill: '#ffffff' }}
+              />
+              <Line
+                type="monotone"
+                dataKey="credit"
+                name="বাকি দেওয়া (৳)"
+                stroke="#e11d48"
+                strokeWidth={2.5}
+                dot={{ r: 3.5, fill: '#e11d48', strokeWidth: 2, stroke: '#ffffff' }}
+                activeDot={{ r: 6, stroke: '#e11d48', strokeWidth: 2, fill: '#ffffff' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </motion.div>
 
       {/* Recent Activity Feed: সর্বশেষ ৫টি লেনদেন */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">

@@ -9,9 +9,6 @@ import {
   Receipt, 
   Plus, 
   FileSpreadsheet, 
-  Banknote, 
-  Smartphone, 
-  Building2,
   CalendarRange,
   Clock,
   ArrowRight,
@@ -214,19 +211,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   // Financial Calculations for the selected period
   const totalReceived = filteredTx
     .filter(t => t.type === 'payment_received')
-    .reduce((s, t) => s + t.amount, 0);
-
-  // Payment Methods Breakdown
-  const cashReceived = filteredTx
-    .filter(t => t.type === 'payment_received' && (!t.paymentMethod || t.paymentMethod === 'cash' || t.paymentMethod === 'নগদ'))
-    .reduce((s, t) => s + t.amount, 0);
-
-  const bkashReceived = filteredTx
-    .filter(t => t.type === 'payment_received' && (t.paymentMethod === 'bkash' || t.paymentMethod === 'বিকাশ'))
-    .reduce((s, t) => s + t.amount, 0);
-
-  const bankReceived = filteredTx
-    .filter(t => t.type === 'payment_received' && (t.paymentMethod === 'bank' || t.paymentMethod === 'ব্যাংক'))
     .reduce((s, t) => s + t.amount, 0);
 
   const totalSales = filteredTx
@@ -968,72 +952,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           setEndDate(clickedYMD);
         }}
       />
-
-      {/* Payment Methods Breakdown Section */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-emerald-600" />
-            <span>পেমেন্ট মাধ্যম অনুযায়ী মোট জমা (নগদ, বিকাশ, ব্যাংক)</span>
-          </h3>
-          <span className="text-xs font-bold text-slate-500">
-            সর্বমোট আদায়: ৳{totalReceived.toLocaleString('bn-BD')}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* নগদ */}
-          <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                <Banknote className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-slate-700 block">নগদ ক্যাশ</span>
-                <span className="text-[10px] text-slate-500">সরাসরি ক্যাশ আদায়</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="text-base font-black text-emerald-700 block">৳{cashReceived.toLocaleString('bn-BD')}</span>
-              <span className="text-[10px] text-emerald-600 font-semibold">{totalReceived > 0 ? Math.round((cashReceived / totalReceived) * 100) : 0}%</span>
-            </div>
-          </div>
-
-          {/* বিকাশ */}
-          <div className="bg-pink-50/70 border border-pink-200 rounded-2xl p-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-bold">
-                <Smartphone className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-slate-700 block">বিকাশ (bKash)</span>
-                <span className="text-[10px] text-slate-500">মোবাইল ব্যাংকিং</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="text-base font-black text-pink-700 block">৳{bkashReceived.toLocaleString('bn-BD')}</span>
-              <span className="text-[10px] text-pink-600 font-semibold">{totalReceived > 0 ? Math.round((bkashReceived / totalReceived) * 100) : 0}%</span>
-            </div>
-          </div>
-
-          {/* ব্যাংক */}
-          <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-slate-700 block">ব্যাংক ট্রান্সফার</span>
-                <span className="text-[10px] text-slate-500">চেক বা অনলাইন ব্যাংক</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="text-base font-black text-blue-700 block">৳{bankReceived.toLocaleString('bn-BD')}</span>
-              <span className="text-[10px] text-blue-600 font-semibold">{totalReceived > 0 ? Math.round((bankReceived / totalReceived) * 100) : 0}%</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Detailed Transactions Section for the Selected Date / Range */}
       <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs space-y-4">

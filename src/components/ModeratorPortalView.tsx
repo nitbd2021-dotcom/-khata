@@ -318,16 +318,16 @@ export const ModeratorPortalView: React.FC<ModeratorPortalViewProps> = ({
               onClick={() => setActiveTab('product_table')}
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
                 activeTab === 'product_table'
-                  ? 'bg-teal-500 text-slate-950 shadow-xs'
+                  ? 'bg-emerald-500 text-slate-950 shadow-xs'
                   : 'text-teal-200 hover:text-white'
               }`}
             >
-              <Boxes className="w-4 h-4" />
-              <span>পণ্য ও পরিমাণ টেবিল</span>
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>পণ্য ও পরিমাণ (গুগল শিট)</span>
               <span className={`px-1.5 py-0.5 text-[10px] rounded-md font-mono font-black ${
-                activeTab === 'product_table' ? 'bg-slate-900 text-teal-300' : 'bg-teal-900/80 text-teal-200 border border-teal-700/50'
+                activeTab === 'product_table' ? 'bg-slate-900 text-emerald-300' : 'bg-emerald-950 text-emerald-200 border border-emerald-700/50'
               }`}>
-                ২+৩ যোগ
+                গুগল শিট
               </span>
             </button>
           </div>
@@ -384,7 +384,7 @@ export const ModeratorPortalView: React.FC<ModeratorPortalViewProps> = ({
             <input
               type="email"
               required
-              placeholder="ডিএসআর-এর ইমেইল আইডি বসান (যেমন: nitbd2021@gmail.com)..."
+              placeholder="ডিএসআর-এর ইমেইল আইডি বসান (যেমন: dsr@khataplus.com)..."
               value={inputShopEmail}
               onChange={e => setInputShopEmail(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
@@ -469,31 +469,31 @@ export const ModeratorPortalView: React.FC<ModeratorPortalViewProps> = ({
         <div className="space-y-6">
           
           {/* Quick link to Product Calculation Table (Col 2 + Col 3 Sum) */}
-          <div className="bg-gradient-to-r from-teal-900 to-slate-900 text-white p-4 sm:p-5 rounded-3xl border border-teal-700/60 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="bg-gradient-to-r from-emerald-900 via-teal-950 to-slate-900 text-white p-4 sm:p-5 rounded-3xl border border-emerald-700/60 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center justify-center shrink-0">
-                <Boxes className="w-6 h-6" />
+              <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                <FileSpreadsheet className="w-6 h-6" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="text-sm sm:text-base font-bold text-white">
-                    মডারেটর পণ্য ও পরিমাণ হিসাব টেবিল
+                    পণ্য ও পরিমাণ হিসাব গুগল শিট টেবিল
                   </h4>
-                  <span className="text-[10px] font-bold bg-teal-400 text-slate-950 px-1.5 py-0.5 rounded">
-                    ২+৩ কলাম যোগ
+                  <span className="text-[10px] font-bold bg-emerald-400 text-slate-950 px-1.5 py-0.5 rounded">
+                    ২+৩ কলাম যোগ (=B+C)
                   </span>
                 </div>
-                <p className="text-xs text-teal-200/80 mt-0.5">
-                  ১ম কলাম: পণ্য এর নাম | ২য় ও ৩য় কলাম: পরিমান | ৪র্থ কলাম: স্বয়ংক্রিয় ২+৩ যোগফল
+                <p className="text-xs text-emerald-200/80 mt-0.5">
+                  ১ম কলাম: পণ্য এর নাম | ২য় ও ৩য় কলাম: পরিমান | ৪র্থ কলাম: স্বয়ংক্রিয় ২+৩ যোগফল (গুগল শিট রেডি)
                 </p>
               </div>
             </div>
 
             <button
               onClick={() => setActiveTab('product_table')}
-              className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer active:scale-95"
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer active:scale-95"
             >
-              <span>টেবিল দেখুন ও এন্ট্রি করুন</span>
+              <span>গুগল শিট টেবিল খুলুন</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

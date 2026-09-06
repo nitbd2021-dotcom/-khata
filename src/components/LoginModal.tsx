@@ -61,11 +61,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   useEffect(() => {
     const session = StorageService.getDeviceSession();
     if (session) {
-      setSavedSession(session);
-      if (mode === 'login' && !email) {
-        setEmail(session.email);
-        setPin(session.pin);
+      if (session.email && session.email.toLowerCase().includes('nitbd2021')) {
+        StorageService.clearDeviceSession();
+        setSavedSession(null);
+        return;
       }
+      setSavedSession(session);
+      // Keep input empty on install / open as requested by user
     }
   }, [mode]);
 
@@ -307,7 +309,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <div className="space-y-3.5">
               
               {/* Remembered Device Quick Unlock Banner */}
-              {savedSession && (
+              {savedSession && !savedSession.email?.toLowerCase().includes('nitbd2021') && (
                 <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 text-left">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">

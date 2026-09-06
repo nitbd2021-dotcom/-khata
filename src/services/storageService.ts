@@ -93,7 +93,7 @@ const seedInitialData = () => {
 
   const defaultUser: User = {
     id: 'user-demo-1',
-    email: 'nitbd2021@gmail.com',
+    email: 'shop@khataplus.com',
     name: 'আহমেদ রফিক',
     phone: '01711223344',
     pin: '1234',
@@ -157,10 +157,13 @@ const seedInitialData = () => {
 
       // Ensure at least demo users have a moderator assigned
       users.forEach(u => {
+        if (u.email.toLowerCase() === 'nitbd2021@gmail.com') {
+          u.email = 'shop@khataplus.com';
+        }
         if (u.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
           u.isAdmin = false;
         }
-        if ((u.id === 'user-demo-1' || u.email.toLowerCase() === 'nitbd2021@gmail.com') && !u.moderatorId) {
+        if ((u.id === 'user-demo-1' || u.email.toLowerCase() === 'shop@khataplus.com') && !u.moderatorId) {
           u.moderatorId = 'user-mod-1';
         }
         if ((u.id === 'user-demo-2' || u.email.toLowerCase() === 'bismillah.store@gmail.com') && !u.moderatorId) {
@@ -441,7 +444,7 @@ const seedInitialData = () => {
   localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.stringify([...initialCustomers, ...demo2Customers]));
   localStorage.setItem(STORAGE_TRANSACTIONS_KEY, JSON.stringify([...initialTransactions, ...demo2Transactions]));
   localStorage.setItem(STORAGE_EXPENSES_KEY, JSON.stringify(initialExpenses));
-  localStorage.setItem(STORAGE_CURRENT_USER_KEY, defaultUser.id);
+  // Note: New installations do NOT automatically log in; the user must explicitly sign in or create an account.
   
   if (!localStorage.getItem(STORAGE_INVENTORY_KEY)) {
     const demoInventory: InventoryItem[] = [
@@ -554,16 +557,20 @@ const seedInitialData = () => {
     localStorage.setItem(STORAGE_INVENTORY_KEY, JSON.stringify(demoInventory));
   }
   
-  // Save device session so user is remembered
-  const deviceSession: DeviceSession = {
-    deviceId: 'dev-' + Math.random().toString(36).substring(2, 9),
-    email: defaultUser.email,
-    pin: defaultUser.pin,
-    rememberMe: true,
-    shopName: defaultUser.shopName,
-    lastActive: new Date().toISOString(),
-  };
-  localStorage.setItem(STORAGE_DEVICE_KEY, JSON.stringify(deviceSession));
+  // Clean up any legacy saved session or current user containing personal email
+  try {
+    const devRaw = localStorage.getItem(STORAGE_DEVICE_KEY);
+    if (devRaw && devRaw.toLowerCase().includes('nitbd2021')) {
+      localStorage.removeItem(STORAGE_DEVICE_KEY);
+    }
+    const currUser = localStorage.getItem(STORAGE_CURRENT_USER_KEY);
+    if (currUser === 'user-demo-1') {
+      // Clear legacy auto-login so that the user must sign in when opening the app
+      localStorage.removeItem(STORAGE_CURRENT_USER_KEY);
+    }
+  } catch {
+    // ignore
+  }
 };
 
 seedInitialData();
@@ -1921,6 +1928,47 @@ export const StorageService = {
     const key = `${STORAGE_MODERATOR_PROD_TABLE_PREFIX}${moderatorId}`;
     localStorage.removeItem(key);
     return StorageService.getModeratorProductTable(moderatorId);
+  },
+
+  getModeratorProductSheetUrl: (moderatorId: string): string => {
+    const key = `khata_mod_product_sheet_${moderatorId}`;
+    return localStorage.getItem(key) || '';
+  },
+
+  saveModeratorProductSheetUrl: (moderatorId: string, url: string): void => {
+    const key = `khata_mod_product_sheet_${moderatorId}`;
+    localStorage.setItem(key, url.trim());
+  },
+
+  getModeratorAutoSync: (moderatorId: string): boolean => {
+    const key = `khata_mod_auto_sync_${moderatorId}`;
+    const val = localStorage.getItem(key);
+    return val === null ? true : val === 'true';
+  },
+
+  setModeratorAutoSync: (moderatorId: string, enabled: boolean): void => {
+    const key = `khata_mod_auto_sync_${moderatorId}`;
+    localStorage.setItem(key, enabled ? 'true' : 'false');
+  },
+
+  getModeratorWebhookUrl: (moderatorId: string): string => {
+    const key = `khata_mod_webhook_${moderatorId}`;
+    return localStorage.getItem(key) || '';
+  },
+
+  saveModeratorWebhookUrl: (moderatorId: string, url: string): void => {
+    const key = `khata_mod_webhook_${moderatorId}`;
+    localStorage.setItem(key, url.trim());
+  },
+
+  getModeratorLastSyncTime: (moderatorId: string): string | null => {
+    const key = `khata_mod_last_sync_${moderatorId}`;
+    return localStorage.getItem(key);
+  },
+
+  setModeratorLastSyncTime: (moderatorId: string, isoString: string): void => {
+    const key = `khata_mod_last_sync_${moderatorId}`;
+    localStorage.setItem(key, isoString);
   }
 };
 

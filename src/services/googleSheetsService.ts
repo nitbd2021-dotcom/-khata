@@ -1,4 +1,4 @@
-import { AdminUserRecord, Customer, Transaction, User } from '../types';
+import { AdminUserRecord, Customer, ModeratorProductTableRow, Transaction, User } from '../types';
 import { StorageService } from './storageService';
 
 export interface SheetSyncStatus {
@@ -262,7 +262,7 @@ export const GoogleSheetsService = {
         GoogleSheetsService.setStoredToken(fallbackToken);
         resolve({
           token: fallbackToken,
-          email: 'nitbd2021@gmail.com',
+          email: 'user@gmail.com',
           name: 'ব্যবহারকারী',
         });
         return;
@@ -613,6 +613,120 @@ export const GoogleSheetsService = {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  },
+
+  /**
+   * Sync Moderator Product Table directly to Google Sheet Webhook or Sheets API
+   */
+  syncModeratorProductsToSheet: async (
+    webhookUrl: string | undefined,
+    sheetUrl: string | undefined,
+    rows: ModeratorProductTableRow[]
+  ): Promise<{ success: boolean; message: string; method: 'webhook' | 'oauth' | 'local' }> => {
+    // 1. If webhookUrl is configured
+    if (webhookUrl && webhookUrl.trim().startsWith('https://script.google.com/macros/s/')) {
+      try {
+        await fetch(webhookUrl.trim(), {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'sync_products',
+            timestamp: new Date().toISOString(),
+            rows: rows.map((r, i) => ({
+              productName: r.productName,
+              quantity1: r.quantity1,
+              quantity2: r.quantity2,
+              sum: (Number(r.quantity1) || 0) + (Number(r.quantity2) || 0),
+              unit: r.unit || 'পিস',
+              rowNumber: i + 2,
+            })),
+          }),
+        });
+        return { success: true, method: 'webhook', message: 'গুগল শিটে ব্যাকগ্রাউন্ডে স্বয়ংক্রিয়ভাবে ডাটা পাঠানো হয়েছে!' };
+      } catch (err) {
+        console.warn('Moderator webhook sync error:', err);
+      }
+    }
+
+    // 2. If OAuth token exists and sheetId can be extracted
+    const sheetId = sheetUrl ? GoogleSheetsService.extractSheetId(sheetUrl) : null;
+    const token = GoogleSheetsService.getStoredToken();
+    if (token && !token.startsWith('oauth2_token_') && sheetId) {
+      try {
+        const totalQ1 = rows.reduce((s, r) => s + (Number(r.quantity1) || 0), 0);
+        const totalQ2 = rows.reduce((s, r) => s + (Number(r.quantity2) || 0), 0);
+        const values = [
+          ['পণ্য এর নাম (১ম কলাম)', 'পরিমান ১ (২য় কলাম)', 'পরিমান ২ (৩য় কলাম)', '২+৩ যোগফল (৪র্থ কলাম)', 'একক'],
+          ...rows.map((r, i) => [
+            r.productName,
+            r.quantity1,
+            r.quantity2,
+            `=B${i + 2}+C${i + 2}`,
+            r.unit || 'পিস'
+          ]),
+          [
+            'সর্বমোট যোগফল',
+            `=SUM(B2:B${rows.length + 1})`,
+            `=SUM(C2:C${rows.length + 1})`,
+            `=SUM(D2:D${rows.length + 1})`,
+            ''
+          ]
+        ];
+
+        await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1:E${values.length}?valueInputOption=USER_ENTERED`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ values }),
+          }
+        );
+        return { success: true, method: 'oauth', message: 'গুগল শিটে সরাসরি লাইভ আপডেট সম্পন্ন!' };
+      } catch (err) {
+        console.warn('Google Sheets API direct write error:', err);
+      }
+    }
+
+    return {
+      success: true,
+      method: 'local',
+      message: 'লোকাল ডিভাইসে সংরক্ষিত হয়েছে।',
+    };
+  },
+
+  /**
+   * Provides ready-to-use Google Apps Script code for Product & Quantity Table
+   */
+  getProductTableAppsScriptSnippet: (): string => {
+    return `function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("পণ্য_ও_পরিমাণ_হিসাব") || ss.getActiveSheet();
+    var payload = JSON.parse(e.postData.contents);
+    
+    // Clear and write updated rows
+    sheet.clearContents();
+    sheet.appendRow(["পণ্য এর নাম (১ম কলাম)", "পরিমান ১ (২য় কলাম)", "পরিমান ২ (৩য় কলাম)", "২+৩ যোগফল (৪র্থ কলাম)", "একক"]);
+    
+    if (payload.rows && Array.isArray(payload.rows)) {
+      for (var i = 0; i < payload.rows.length; i++) {
+        var r = payload.rows[i];
+        var rowNum = i + 2;
+        sheet.appendRow([r.productName, r.quantity1, r.quantity2, "=B" + rowNum + "+C" + rowNum, r.unit || "পিস"]);
+      }
+      var totalRowNum = payload.rows.length + 2;
+      sheet.appendRow(["সর্বমোট যোগফল", "=SUM(B2:B" + (totalRowNum - 1) + ")", "=SUM(C2:C" + (totalRowNum - 1) + ")", "=SUM(D2:D" + (totalRowNum - 1) + ")", ""]);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
   },
 };
 

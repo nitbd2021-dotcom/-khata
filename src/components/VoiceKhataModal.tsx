@@ -343,7 +343,7 @@ export const VoiceKhataModal: React.FC<VoiceKhataModalProps> = ({
 
               {/* View / Edit Mode Form */}
               {!isEditing ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white rounded-xl p-3 border border-emerald-200 shadow-2xs text-left">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-white rounded-xl p-3 border border-emerald-200 shadow-2xs text-left">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 block">কাস্টমার</span>
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -365,12 +365,6 @@ export const VoiceKhataModal: React.FC<VoiceKhataModalProps> = ({
                       {customType === 'payment_received' ? 'টাকা পেলাম (জমা)' :
                        customType === 'credit_given' ? 'বাকি দিলাম' :
                        customType === 'loan_given' ? 'ধার দিলাম' : 'বাকি নিলাম'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 block">পেমেন্ট মাধ্যম</span>
-                    <span className="text-xs sm:text-sm font-black text-emerald-800 block mt-0.5">
-                      {formatBanglaPaymentMethod(customPaymentMethod)}
                     </span>
                   </div>
                   <div>
@@ -466,22 +460,6 @@ export const VoiceKhataModal: React.FC<VoiceKhataModalProps> = ({
                         বাকি নিলাম
                       </button>
                     </div>
-                  </div>
-
-                  {/* Payment Method field */}
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">পেমেন্ট মাধ্যম সিলেক্ট করুন</label>
-                    <select
-                      value={customPaymentMethod}
-                      onChange={e => setCustomPaymentMethod(e.target.value as PaymentMethod)}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 cursor-pointer"
-                    >
-                      <option value="cash">💵 নগদ (Cash)</option>
-                      <option value="bkash">📱 বিকাশ (bKash)</option>
-                      <option value="bank">🏦 ব্যাংক (Bank)</option>
-                      <option value="nagad">📲 নগদ ওয়ালেট (Nagad)</option>
-                      <option value="other">📝 অন্যান্য (Other)</option>
-                    </select>
                   </div>
 
                   {/* Amount field */}

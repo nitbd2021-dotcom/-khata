@@ -162,31 +162,21 @@ export default function App() {
     };
   }, [currentUser, triggerSync]);
 
-  // Load User Data & Remembered Device
+  // Load User Data & Enforce Sign-in on App Launch/Install
   useEffect(() => {
+    // Clean up any legacy device session with personal email
+    const session = StorageService.getDeviceSession();
+    if (session && session.email?.toLowerCase().includes('nitbd2021')) {
+      StorageService.clearDeviceSession();
+    }
+
     const user = StorageService.getCurrentUser();
-    if (user) {
+    if (user && !user.email?.toLowerCase().includes('nitbd2021')) {
       loadUserData(user);
     } else {
-      // Check if device remembered session exists
-      const session = StorageService.getDeviceSession();
-      if (session && session.rememberMe) {
-        try {
-          const { user: autoUser } = StorageService.registerOrLogin(
-            session.email,
-            session.pin,
-            session.shopName,
-            undefined,
-            undefined,
-            undefined,
-            true
-          );
-          loadUserData(autoUser);
-          return;
-        } catch (e) {
-          console.warn('Auto login failed:', e);
-        }
-      }
+      // User must sign in before the app opens
+      StorageService.setCurrentUser(null);
+      setCurrentUser(null);
       setIsLoginModalOpen(true);
     }
   }, []);
@@ -302,6 +292,7 @@ export default function App() {
     if (currentUser) {
       const updatedCustomers = StorageService.getCustomers(currentUser.id);
       setCustomers(updatedCustomers);
+      triggerSync(currentUser);
     }
   };
 
@@ -310,6 +301,7 @@ export default function App() {
     StorageService.addExpense(currentUser.id, category, amount, description);
     const updatedExpenses = StorageService.getExpenses(currentUser.id);
     setExpenses(updatedExpenses);
+    triggerSync(currentUser);
   };
 
   const handleVoiceKhataConfirm = (
@@ -788,10 +780,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Modals */}
-      {isLoginModalOpen && (
+      {/* Modals: Force Sign-in if no currentUser */}
+      {(!currentUser || isLoginModalOpen) && (
         <LoginModal
-          isOpen={isLoginModalOpen}
+          isOpen={true}
           initialMode={loginModalInitialMode}
           onClose={currentUser ? () => setIsLoginModalOpen(false) : undefined}
           onLoginSuccess={handleLoginSuccess}
