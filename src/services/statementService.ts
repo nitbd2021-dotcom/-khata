@@ -183,21 +183,36 @@ export const generateCustomerStatementData = (
   };
 };
 
+export interface StatementCustomOptions {
+  shopName?: string;
+  phone?: string;
+  shopAddress?: string;
+  title?: string;
+  footerMessage?: string;
+}
+
 /**
  * Generates an elegant WhatsApp summary for the Statement
  */
 export const generateStatementWhatsAppText = (
   customer: Customer,
   user: User,
-  data: FilteredStatementData
+  data: FilteredStatementData,
+  customOptions?: StatementCustomOptions
 ): string => {
+  const shopName = customOptions?.shopName?.trim() || user.shopName;
+  const phone = customOptions?.phone !== undefined ? customOptions.phone.trim() : (user.phone || '');
+  const address = customOptions?.shopAddress !== undefined ? customOptions.shopAddress.trim() : (user.shopAddress || '');
+  const title = customOptions?.title?.trim() || 'কাস্টমার লেজার বিবরণী (Account Statement)';
+  const footerMessage = customOptions?.footerMessage?.trim();
+
   const lines = [
-    `📊 *কাস্টমার লেজার বিবরণী (Account Statement)*`,
-    `🏪 *${user.shopName}*`,
+    `📊 *${title}*`,
+    `🏪 *${shopName}*`,
   ];
 
-  if (user.phone) lines.push(`📞 যোগাযোগ: ${user.phone}`);
-  if (user.shopAddress) lines.push(`📍 ঠিকানা: ${user.shopAddress}`);
+  if (phone) lines.push(`📞 যোগাযোগ: ${phone}`);
+  if (address) lines.push(`📍 ঠিকানা: ${address}`);
 
   lines.push(`━━━━━━━━━━━━━━━━━━━━`);
   lines.push(`👤 *গ্রাহক:* ${customer.name}${customer.code ? ` (${customer.code})` : ''}`);
@@ -220,7 +235,12 @@ export const generateStatementWhatsAppText = (
 
   lines.push(`━━━━━━━━━━━━━━━━━━━━`);
   lines.push(`মোট লেনদেন সংখ্যা: ${toBanglaNumber(data.items.length)} টি`);
-  lines.push(`স্বচ্ছ হিসাব ব্যবস্থাপনায় সাথে থাকার জন্য ধন্যবাদ! 🙏`);
+  
+  if (footerMessage) {
+    lines.push(`📝 *বিশেষ বার্তা:* ${footerMessage}`);
+  } else {
+    lines.push(`স্বচ্ছ হিসাব ব্যবস্থাপনায় সাথে থাকার জন্য ধন্যবাদ! 🙏`);
+  }
 
   return lines.join('\n');
 };

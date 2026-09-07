@@ -18,7 +18,16 @@ import {
   CheckCircle2, 
   Filter,
   Layers,
-  ChevronRight
+  ChevronRight,
+  SlidersHorizontal,
+  RotateCcw,
+  Save,
+  MessageSquare,
+  Building2,
+  Eye,
+  Pencil,
+  Sparkles,
+  CheckCheck
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Customer, Transaction, User } from '../types';
@@ -60,7 +69,123 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
   const [copiedText, setCopiedText] = useState<boolean>(false);
   const [shareFeedback, setShareFeedback] = useState<string>('');
 
+  // Storage key for user-specific statement customizations
+  const statementStorageKey = `khata_statement_custom_prefs_${user.id}`;
+
+  // Customization States (with localStorage memory)
+  const [customShopName, setCustomShopName] = useState<string>(user.shopName);
+  const [customShopAddress, setCustomShopAddress] = useState<string>(user.shopAddress || '');
+  const [customPhone, setCustomPhone] = useState<string>(user.phone || '');
+  const [customStatementTitle, setCustomStatementTitle] = useState<string>('ডিজিটাল খাতা লেজার বিবরণী');
+  const [customFooterMessage, setCustomFooterMessage] = useState<string>(
+    '* এটি একটি কম্পিউটারাইজড ডিজিটাল লেজার স্টেটমেন্ট। এতে কোনো ভুলত্রুটি পরিলক্ষিত হলে অনুগ্রহ করে তিন (৩) কার্যদিবসের মধ্যে DSR বা বিক্রয় প্রতিনিধির সাথে যোগাযোগ করার অনুরোধ করা হলো।'
+  );
+  const [customPaymentNote, setCustomPaymentNote] = useState<string>('');
+  const [showSignatures, setShowSignatures] = useState<boolean>(true);
+  const [showQrCode, setShowQrCode] = useState<boolean>(true);
+  const [showSummaryCards, setShowSummaryCards] = useState<boolean>(true);
+
+  // Customization panel expand/collapse and toast message
+  const [isCustomizing, setIsCustomizing] = useState<boolean>(false);
+  const [customSaveToast, setCustomSaveToast] = useState<string>('');
+
   const statementRef = useRef<HTMLDivElement>(null);
+
+  // Load saved preferences on mount or when user changes
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(statementStorageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.shopName) setCustomShopName(parsed.shopName);
+        if (parsed.shopAddress !== undefined) setCustomShopAddress(parsed.shopAddress);
+        if (parsed.phone !== undefined) setCustomPhone(parsed.phone);
+        if (parsed.statementTitle) setCustomStatementTitle(parsed.statementTitle);
+        if (parsed.footerMessage !== undefined) setCustomFooterMessage(parsed.footerMessage);
+        if (parsed.paymentNote !== undefined) setCustomPaymentNote(parsed.paymentNote);
+        if (typeof parsed.showSignatures === 'boolean') setShowSignatures(parsed.showSignatures);
+        if (typeof parsed.showQrCode === 'boolean') setShowQrCode(parsed.showQrCode);
+        if (typeof parsed.showSummaryCards === 'boolean') setShowSummaryCards(parsed.showSummaryCards);
+        return;
+      }
+    } catch (err) {
+      console.warn('Error reading saved statement settings:', err);
+    }
+
+    // Default initialization
+    setCustomShopName(user.shopName);
+    setCustomShopAddress(user.shopAddress || '');
+    setCustomPhone(user.phone || '');
+  }, [user.id, user.shopName, user.shopAddress, user.phone, statementStorageKey]);
+
+  // Save current customization as default
+  const handleSaveCustomPrefs = () => {
+    try {
+      const prefs = {
+        shopName: customShopName,
+        shopAddress: customShopAddress,
+        phone: customPhone,
+        statementTitle: customStatementTitle,
+        footerMessage: customFooterMessage,
+        paymentNote: customPaymentNote,
+        showSignatures,
+        showQrCode,
+        showSummaryCards,
+      };
+      localStorage.setItem(statementStorageKey, JSON.stringify(prefs));
+      setCustomSaveToast('কাস্টমাইজেশন তথ্য ডিফল্ট হিসেবে সংরক্ষিত হয়েছে!');
+      setTimeout(() => setCustomSaveToast(''), 3000);
+    } catch (err) {
+      console.error('Failed to save statement preferences:', err);
+    }
+  };
+
+  // Reset customizations to current user account default
+  const handleResetCustomPrefs = () => {
+    setCustomShopName(user.shopName);
+    setCustomShopAddress(user.shopAddress || '');
+    setCustomPhone(user.phone || '');
+    setCustomStatementTitle('ডিজিটাল খাতা লেজার বিবরণী');
+    setCustomFooterMessage(
+      '* এটি একটি কম্পিউটারাইজড ডিজিটাল লেজার স্টেটমেন্ট। এতে কোনো ভুলত্রুটি পরিলক্ষিত হলে অনুগ্রহ করে তিন (৩) কার্যদিবসের মধ্যে DSR বা বিক্রয় প্রতিনিধির সাথে যোগাযোগ করার অনুরোধ করা হলো।'
+    );
+    setCustomPaymentNote('');
+    setShowSignatures(true);
+    setShowQrCode(true);
+    setShowSummaryCards(true);
+
+    try {
+      localStorage.removeItem(statementStorageKey);
+      setCustomSaveToast('ডিফল্ট সেটিংসে সফলভাবে রিসেট করা হয়েছে!');
+      setTimeout(() => setCustomSaveToast(''), 3000);
+    } catch (err) {
+      console.error('Failed to reset statement preferences:', err);
+    }
+  };
+
+  // Quick preset messages for footer
+  const quickFooterPresets = [
+    {
+      id: 'default',
+      title: 'ডিফল্ট নোটিশ',
+      text: '* এটি একটি কম্পিউটারাইজড ডিজিটাল লেজার স্টেটমেন্ট। এতে কোনো ভুলত্রুটি পরিলক্ষিত হলে অনুগ্রহ করে তিন (৩) কার্যদিবসের মধ্যে DSR বা বিক্রয় প্রতিনিধির সাথে যোগাযোগ করার অনুরোধ করা হলো।'
+    },
+    {
+      id: 'urgent',
+      title: 'বকেয়া তাগাদা',
+      text: 'সম্মানিত গ্রাহক, উল্লেখিত বকেয়া টাকাটি আগামী ৭ দিনের মধ্যে পরিশোধ করার জন্য বিশেষভাবে অনুরোধ করা হলো। কোনো গরমিল থাকলে দ্রুত আমাদের জানান।'
+    },
+    {
+      id: 'payment',
+      title: 'বিকাশ/নগদ পেমেন্ট',
+      text: `বকেয়া পরিশোধের সহজ মাধ্যম: বিকাশ / নগদ (পার্সোনাল): ${customPhone || user.phone || '০১৭XXXXXXXX'}। টাকা পরিশোধের পর অনুগ্রহ করে এসএমএস দিয়ে নিশ্চিত করুন।`
+    },
+    {
+      id: 'appreciation',
+      title: 'ধন্যবাদ ও শুভেচ্ছা',
+      text: 'আমাদের সাথে নিয়মিত লেনদেন ও ব্যবসার জন্য আন্তরিক ধন্যবাদ। আপনার ব্যবসার উত্তরোত্তর উন্নতি ও সমৃদ্ধি কামনা করি।'
+    }
+  ];
 
   // Re-generate statement whenever customer, transactions, or date filters change
   useEffect(() => {
@@ -79,7 +204,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
     // Generate Verification QR Code
     const qrPayload = JSON.stringify({
       stm: data.statementNo,
-      shop: user.shopName,
+      shop: customShopName || user.shopName,
       cust: customer.name,
       code: customer.code || '',
       bal: data.closingBalance,
@@ -104,7 +229,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
         }
       }
     );
-  }, [isOpen, customer, transactions, user, periodType, customStart, customEnd]);
+  }, [isOpen, customer, transactions, user, periodType, customStart, customEnd, customShopName]);
 
   if (!isOpen || !customer || !statementData) return null;
 
@@ -139,7 +264,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
           <html lang="bn">
           <head>
             <meta charset="UTF-8">
-            <title>স্টেটমেন্ট_${customer.name}_${statementData.statementNo}</title>
+            <title>${customStatementTitle || 'স্টেটমেন্ট'}_${customer.name}_${statementData.statementNo}</title>
             <script src="https://cdn.tailwindcss.com"></script>
             <style>
               @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
@@ -194,7 +319,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
       <html lang="bn">
       <head>
         <meta charset="UTF-8">
-        <title>স্টেটমেন্ট_${customer.name}_${statementData.statementNo}</title>
+        <title>${customStatementTitle || 'স্টেটমেন্ট'}_${customer.name}_${statementData.statementNo}</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
@@ -249,7 +374,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>স্টেটমেন্ট_${customer.name}_${statementData.statementNo}</title>
+  <title>${customStatementTitle || 'স্টেটমেন্ট'}_${customer.name}_${statementData.statementNo}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
@@ -288,7 +413,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `স্টেটমেন্ট_${customer.name}_${statementData.statementNo}.html`;
+    link.download = `${customStatementTitle || 'স্টেটমেন্ট'}_${customer.name}_${statementData.statementNo}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -297,7 +422,13 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
 
   // WhatsApp Share Handler
   const handleShareWhatsApp = () => {
-    const text = generateStatementWhatsAppText(customer, user, statementData);
+    const text = generateStatementWhatsAppText(customer, user, statementData, {
+      shopName: customShopName,
+      phone: customPhone,
+      shopAddress: customShopAddress,
+      title: customStatementTitle,
+      footerMessage: [customFooterMessage, customPaymentNote].filter(Boolean).join('\n'),
+    });
     let cleanPhone = customer.phone.replace(/[^0-9]/g, '');
     if (cleanPhone.startsWith('01')) {
       cleanPhone = '88' + cleanPhone;
@@ -309,7 +440,13 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
 
   // Copy Statement Text Handler
   const handleCopyText = async () => {
-    const text = generateStatementWhatsAppText(customer, user, statementData);
+    const text = generateStatementWhatsAppText(customer, user, statementData, {
+      shopName: customShopName,
+      phone: customPhone,
+      shopAddress: customShopAddress,
+      title: customStatementTitle,
+      footerMessage: [customFooterMessage, customPaymentNote].filter(Boolean).join('\n'),
+    });
     try {
       await navigator.clipboard.writeText(text);
       setCopiedText(true);
@@ -468,6 +605,251 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
                 {copiedText ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
+
+            {/* Customization Toggle & Quick Status Bar */}
+            <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-slate-100 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsCustomizing(prev => !prev)}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  isCustomizing
+                    ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-300'
+                    : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>স্টেটমেন্ট কাস্টমাইজ করুন (দোকানের নাম, ফুটার নোট)</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${
+                  isCustomizing ? 'bg-white/20 text-white' : 'bg-indigo-200/70 text-indigo-900'
+                }`}>
+                  {isCustomizing ? 'লুকান' : 'এডিট'}
+                </span>
+              </button>
+
+              <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                <span className="truncate max-w-[200px] font-semibold text-slate-700">
+                  🏪 {customShopName || user.shopName}
+                </span>
+                {customPaymentNote && (
+                  <span className="hidden sm:inline bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200 font-medium">
+                    💳 পেমেন্ট তথ্য যুক্ত
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Expandable Customization Settings Card */}
+            {isCustomizing && (
+              <div className="mt-2 p-3.5 sm:p-4.5 bg-slate-50 border border-indigo-200/80 rounded-2xl space-y-4 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold">
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">
+                        পিডিএফ ও প্রিন্ট স্টেটমেন্ট কাস্টমাইজেশন
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        এখানে পরিবর্তিত তথ্য সরাসরি স্টেটমেন্ট প্রিভিউ, ডাউনলোড ও হোয়াটসঅ্যাপ টেক্সটে যুক্ত হবে।
+                      </p>
+                    </div>
+                  </div>
+
+                  {customSaveToast && (
+                    <div className="text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-1 rounded-lg border border-emerald-300 flex items-center gap-1">
+                      <CheckCheck className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>{customSaveToast}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Left Column: Shop & Letterhead Info */}
+                  <div className="space-y-3 bg-white p-3 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                      <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>দোকান ও ব্র্যান্ডিং তথ্য</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        দোকানের নাম (Shop Name):
+                      </label>
+                      <input
+                        type="text"
+                        value={customShopName}
+                        onChange={e => setCustomShopName(e.target.value)}
+                        placeholder={user.shopName}
+                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        স্টেটমেন্টের শিরোনাম (Statement Title):
+                      </label>
+                      <input
+                        type="text"
+                        value={customStatementTitle}
+                        onChange={e => setCustomStatementTitle(e.target.value)}
+                        placeholder="যেমন: ডিজিটাল খাতা লেজার বিবরণী"
+                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          মোবাইল নম্বর:
+                        </label>
+                        <input
+                          type="text"
+                          value={customPhone}
+                          onChange={e => setCustomPhone(e.target.value)}
+                          placeholder={user.phone || '০১৭XXXXXXXX'}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          দোকানের ঠিকানা:
+                        </label>
+                        <input
+                          type="text"
+                          value={customShopAddress}
+                          onChange={e => setCustomShopAddress(e.target.value)}
+                          placeholder={user.shopAddress || 'ঠিকানা'}
+                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Footer Note, Presets & Payment Note */}
+                  <div className="space-y-3 bg-white p-3 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                      <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>ফুটার বার্তা ও বিশেষ নির্দেশিকা</span>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold text-slate-700">
+                          ফুটার মেসেজ (Footer Message):
+                        </label>
+                      </div>
+                      <textarea
+                        rows={2}
+                        value={customFooterMessage}
+                        onChange={e => setCustomFooterMessage(e.target.value)}
+                        placeholder="স্টেটমেন্টের নিচের বার্তা লিখুন..."
+                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-500 resize-none"
+                      />
+                    </div>
+
+                    {/* Quick Preset Buttons */}
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block mb-1">
+                        রেডিমেড মেসেজ সিলেক্ট করুন:
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {quickFooterPresets.map(preset => (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => setCustomFooterMessage(preset.text)}
+                            className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 border border-slate-200 transition font-medium cursor-pointer"
+                          >
+                            {preset.title}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        পেমেন্ট নোট / বিকাশ নম্বর (ঐচ্ছিক):
+                      </label>
+                      <input
+                        type="text"
+                        value={customPaymentNote}
+                        onChange={e => setCustomPaymentNote(e.target.value)}
+                        placeholder="যেমন: বিকাশ / নগদ (পার্সোনাল): ০১৭XXXXXXXX"
+                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Display Visibility Toggles & Actions */}
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200 flex-wrap">
+                  <div className="flex items-center gap-3 sm:gap-4 flex-wrap text-xs text-slate-700">
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={showSignatures}
+                        onChange={e => setShowSignatures(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold">স্বাক্ষর ব্লক</span>
+                    </label>
+
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={showQrCode}
+                        onChange={e => setShowQrCode(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold">QR কোড</span>
+                    </label>
+
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={showSummaryCards}
+                        onChange={e => setShowSummaryCards(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                      />
+                      <span className="text-[11px] font-semibold">সামারি কার্ডস</span>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleResetCustomPrefs}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-slate-600 hover:text-red-700 hover:bg-red-50 rounded-lg text-xs font-semibold transition cursor-pointer"
+                      title="ডিফল্ট তথ্যে ফিরে যান"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>রিসেট</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSaveCustomPrefs}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-2xs"
+                      title="ভবিষ্যতের স্টেটমেন্টের জন্য সংরক্ষণ করুন"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>ডিফল্ট সেভ</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomizing(false)}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>প্রিভিউ দেখুন</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Custom Date Inputs if 'custom' selected */}
@@ -512,10 +894,10 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold tracking-wider uppercase mb-1">
-                    ডিজিটাল খাতা লেজার বিবরণী
+                    {customStatementTitle || 'ডিজিটাল খাতা লেজার বিবরণী'}
                   </div>
                   <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
-                    {user.shopName}
+                    {customShopName || user.shopName}
                   </h1>
                   {user.shopCategory && (
                     <p className="text-xs font-bold text-slate-600 mt-0.5">
@@ -523,7 +905,8 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
                     </p>
                   )}
                   <p className="text-xs text-slate-500 mt-1">
-                    {user.shopAddress ? `ঠিকানা: ${user.shopAddress}` : ''} {user.phone ? ` • মোবাইল: ${user.phone}` : ''}
+                    {(customShopAddress || user.shopAddress) ? `ঠিকানা: ${customShopAddress || user.shopAddress}` : ''}
+                    {(customPhone || user.phone) ? ` • মোবাইল: ${customPhone || user.phone}` : ''}
                   </p>
                 </div>
 
@@ -584,50 +967,52 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
             </div>
 
             {/* Summary KPI Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-500 block">প্রারম্ভিক জের (Opening)</span>
-                <div className="text-sm sm:text-base font-black text-slate-800 mt-0.5">
-                  ৳{statementData.openingBalance.toLocaleString('bn-BD')}
+            {showSummaryCards && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-500 block">প্রারম্ভিক জের (Opening)</span>
+                  <div className="text-sm sm:text-base font-black text-slate-800 mt-0.5">
+                    ৳{statementData.openingBalance.toLocaleString('bn-BD')}
+                  </div>
                 </div>
-              </div>
 
-              <div className="p-3 rounded-xl bg-red-50/70 border border-red-200">
-                <span className="text-[10px] font-bold text-red-700 block">মোট বাকি / বিক্রয় (+)</span>
-                <div className="text-sm sm:text-base font-black text-red-700 mt-0.5">
-                  ৳{statementData.totalDebits.toLocaleString('bn-BD')}
+                <div className="p-3 rounded-xl bg-red-50/70 border border-red-200">
+                  <span className="text-[10px] font-bold text-red-700 block">মোট বাকি / বিক্রয় (+)</span>
+                  <div className="text-sm sm:text-base font-black text-red-700 mt-0.5">
+                    ৳{statementData.totalDebits.toLocaleString('bn-BD')}
+                  </div>
                 </div>
-              </div>
 
-              <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                <span className="text-[10px] font-bold text-emerald-700 block">মোট জমা / পরিশোধ (-)</span>
-                <div className="text-sm sm:text-base font-black text-emerald-700 mt-0.5">
-                  ৳{statementData.totalCredits.toLocaleString('bn-BD')}
+                <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                  <span className="text-[10px] font-bold text-emerald-700 block">মোট জমা / পরিশোধ (-)</span>
+                  <div className="text-sm sm:text-base font-black text-emerald-700 mt-0.5">
+                    ৳{statementData.totalCredits.toLocaleString('bn-BD')}
+                  </div>
                 </div>
-              </div>
 
-              <div className={`p-3 rounded-xl border ${
-                statementData.closingBalance > 0
-                  ? 'bg-red-50 border-red-300'
-                  : statementData.closingBalance < 0
-                  ? 'bg-purple-50 border-purple-300'
-                  : 'bg-emerald-50 border-emerald-300'
-              }`}>
-                <span className={`text-[10px] font-bold block ${
-                  statementData.closingBalance > 0 ? 'text-red-800' : 'text-emerald-800'
+                <div className={`p-3 rounded-xl border ${
+                  statementData.closingBalance > 0
+                    ? 'bg-red-50 border-red-300'
+                    : statementData.closingBalance < 0
+                    ? 'bg-purple-50 border-purple-300'
+                    : 'bg-emerald-50 border-emerald-300'
                 }`}>
-                  বর্তমান নিট বকেয়া
-                </span>
-                <div className={`text-sm sm:text-base font-black mt-0.5 ${
-                  statementData.closingBalance > 0 ? 'text-red-700' : 'text-emerald-700'
-                }`}>
-                  ৳{Math.abs(statementData.closingBalance).toLocaleString('bn-BD')}
-                  <span className="text-[10px] ml-1 font-bold">
-                    {statementData.closingBalance > 0 ? '(পাওনা)' : statementData.closingBalance < 0 ? '(দেনা)' : '(পরিশোধ)'}
+                  <span className={`text-[10px] font-bold block ${
+                    statementData.closingBalance > 0 ? 'text-red-800' : 'text-emerald-800'
+                  }`}>
+                    বর্তমান নিট বকেয়া
                   </span>
+                  <div className={`text-sm sm:text-base font-black mt-0.5 ${
+                    statementData.closingBalance > 0 ? 'text-red-700' : 'text-emerald-700'
+                  }`}>
+                    ৳{Math.abs(statementData.closingBalance).toLocaleString('bn-BD')}
+                    <span className="text-[10px] ml-1 font-bold">
+                      {statementData.closingBalance > 0 ? '(পাওনা)' : statementData.closingBalance < 0 ? '(দেনা)' : '(পরিশোধ)'}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Detailed Transaction Table */}
             <div className="space-y-2">
@@ -727,13 +1112,23 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
             </div>
 
             {/* Note & Authorization / Signatures */}
-            <div className="pt-6 border-t border-slate-200 space-y-6">
-              <div className="flex items-center justify-between text-[10px] text-slate-500 gap-4">
-                <p>
-                  * এটি একটি কম্পিউটারাইজড ডিজিটাল লেজার স্টেটমেন্ট। এতে কোনো ভুলত্রুটি পরিলক্ষিত হলে অনুগ্রহ করে তিন (৩) কার্যদিবসের মধ্যে DSR বা বিক্রয় প্রতিনিধির সাথে যোগাযোগ করার অনুরোধ করা হলো।
-                </p>
-                {qrDataUrl && (
-                  <div className="flex items-center gap-1.5 shrink-0">
+            <div className="pt-6 border-t border-slate-200 space-y-4">
+              {/* Optional Custom Payment Note */}
+              {customPaymentNote && (
+                <div className="p-2.5 sm:p-3 rounded-xl bg-indigo-50/80 border border-indigo-200 text-xs text-indigo-950 font-semibold flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span>{customPaymentNote}</span>
+                </div>
+              )}
+
+              <div className="flex items-start justify-between text-[11px] text-slate-600 gap-4">
+                <div className="space-y-1 flex-1">
+                  <p className="leading-relaxed font-medium">
+                    {customFooterMessage || '* এটি একটি কম্পিউটারাইজড ডিজিটাল লেজার স্টেটমেন্ট। এতে কোনো ভুলত্রুটি পরিলক্ষিত হলে অনুগ্রহ করে তিন (৩) কার্যদিবসের মধ্যে যোগাযোগ করার অনুরোধ করা হলো।'}
+                  </p>
+                </div>
+                {showQrCode && qrDataUrl && (
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
                     <img src={qrDataUrl} alt="QR Verification" className="w-12 h-12 rounded border border-slate-200" />
                     <span className="text-[9px] text-slate-400 max-w-[60px] leading-tight">
                       স্ক্যান করে তথ্য যাচাই করুন
@@ -743,21 +1138,23 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
               </div>
 
               {/* Signatures */}
-              <div className="grid grid-cols-2 gap-8 pt-8">
-                <div className="text-center">
-                  <div className="border-t border-dashed border-slate-400 pt-1.5 mx-auto w-36 sm:w-48">
-                    <p className="text-xs font-bold text-slate-800">গ্রাহকের স্বাক্ষর</p>
-                    <p className="text-[10px] text-slate-400">Customer Signature</p>
+              {showSignatures && (
+                <div className="grid grid-cols-2 gap-8 pt-6">
+                  <div className="text-center">
+                    <div className="border-t border-dashed border-slate-400 pt-1.5 mx-auto w-36 sm:w-48">
+                      <p className="text-xs font-bold text-slate-800">গ্রাহকের স্বাক্ষর</p>
+                      <p className="text-[10px] text-slate-400">Customer Signature</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="text-center">
-                  <div className="border-t border-dashed border-slate-400 pt-1.5 mx-auto w-36 sm:w-48">
-                    <p className="text-xs font-bold text-slate-800">অনুমোদিত কর্মকর্তার স্বাক্ষর</p>
-                    <p className="text-[10px] text-slate-400">Authorized DSR / Manager</p>
+                  <div className="text-center">
+                    <div className="border-t border-dashed border-slate-400 pt-1.5 mx-auto w-36 sm:w-48">
+                      <p className="text-xs font-bold text-slate-800">অনুমোদিত কর্মকর্তার স্বাক্ষর</p>
+                      <p className="text-[10px] text-slate-400">Authorized DSR / Manager</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
           </div>
