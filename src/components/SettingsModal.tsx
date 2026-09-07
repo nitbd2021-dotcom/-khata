@@ -17,12 +17,18 @@ import {
   UserPlus,
   LogIn,
   Target,
-  Receipt
+  Receipt,
+  Tag,
+  Plus,
+  AlertCircle,
+  Info,
+  Users
 } from 'lucide-react';
-import { User } from '../types';
+import { User, Customer } from '../types';
 import { GoogleSheetsService } from '../services/googleSheetsService';
 import { StorageService } from '../services/storageService';
 import { PWAInstallButton } from './PWAInstallPrompt';
+import { PRESET_CUSTOMER_TAGS } from '../constants/customerTags';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -31,6 +37,7 @@ interface SettingsModalProps {
   onUpdateUser: (updated: User) => void;
   onLogout: () => void;
   onOpenAuthModal?: (mode: 'login' | 'register') => void;
+  onCustomerUpdated?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -40,6 +47,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onUpdateUser,
   onLogout,
   onOpenAuthModal,
+  onCustomerUpdated,
 }) => {
   const [shopName, setShopName] = useState(user.shopName);
   const [shopAddress, setShopAddress] = useState(user.shopAddress || '');
@@ -50,6 +58,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [clientId, setClientId] = useState(GoogleSheetsService.getCustomClientId());
   const [isSyncing, setIsSyncing] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Customer Tags Management State
+  const [customTags, setCustomTags] = useState<string[]>(() => StorageService.getCustomTags(user.id));
+  const [newTagInput, setNewTagInput] = useState<string>('');
+  const [tagFeedback, setTagFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [tagToDeleteConfirm, setTagToDeleteConfirm] = useState<string | null>(null);
+  const [userCustomers, setUserCustomers] = useState<Customer[]>(() => StorageService.getCustomers(user.id));
+  const [showPresetsPreview, setShowPresetsPreview] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -113,6 +129,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     StorageService.clearDeviceSession();
     setSuccessMsg('এই ডিভাইসের মেমোরি ক্লিয়ার করা হয়েছে।');
     setTimeout(() => setSuccessMsg(''), 3000);
+  };
+
+  const handleAddCustomTag = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = newTagInput.trim();
+    if (!clean) return;
+
+    const result = StorageService.addCustomTag(user.id, clean);
+    if (result.success) {
+      setCustomTags(result.tags);
+      setNewTagInput('');
+      setTagFeedback({ type: 'success', message: result.message });
+      if (onCustomerUpdated) {
+        onCustomerUpdated();
+      }
+      setTimeout(() => setTagFeedback(null), 3500);
+    } else {
+      setTagFeedback({ type: 'error', message: result.message });
+      setTimeout(() => setTagFeedback(null), 4000);
+    }
+  };
+
+  const handleDeleteCustomTag = (tag: string) => {
+    const result = StorageService.deleteCustomTag(user.id, tag);
+    if (result.success) {
+      setCustomTags(result.tags);
+      setTagToDeleteConfirm(null);
+      setUserCustomers(StorageService.getCustomers(user.id));
+      setTagFeedback({ type: 'success', message: result.message });
+      if (onCustomerUpdated) {
+        onCustomerUpdated();
+      }
+      setTimeout(() => setTagFeedback(null), 4000);
+    }
+  };
+
+  const getCustomerCountForTag = (tag: string) => {
+    const lower = tag.trim().toLowerCase();
+    return userCustomers.filter(c => 
+      Array.isArray(c.tags) && c.tags.some(t => (t || '').trim().toLowerCase() === lower)
+    ).length;
   };
 
   return (
@@ -380,6 +437,180 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               পরিবর্তন সংরক্ষণ করুন
             </button>
           </form>
+
+          {/* Customer Tags & Categories Management Section */}
+          <div id="settings-customer-tags-section" className="pt-2 border-t border-slate-100">
+            <div className="bg-indigo-50/50 border border-indigo-200/90 rounded-2xl p-3.5 sm:p-4 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                    <Tag className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>কাস্টমার ট্যাগ ও ক্যাটাগরি ম্যানেজমেন্ট</span>
+                      <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
+                        {customTags.length}টি নিজস্ব ট্যাগ
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      কাস্টমারদের দ্রুত শ্রেণিবিভাগ করতে নিজস্ব ট্যাগ তৈরি ও পরিচালনা করুন
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Inline Feedback Banner */}
+              {tagFeedback && (
+                <div className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-semibold border transition ${
+                  tagFeedback.type === 'success' 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}>
+                  {tagFeedback.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span>{tagFeedback.message}</span>
+                </div>
+              )}
+
+              {/* Add Custom Tag Form */}
+              <form onSubmit={handleAddCustomTag} className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    id="settings-custom-tag-input"
+                    placeholder="নতুন ট্যাগের নাম লিখুন (যেমন: ঠিকাদার, কর্পোরেট, বিশেষ_ছাড়)..."
+                    value={newTagInput}
+                    onChange={e => setNewTagInput(e.target.value)}
+                    className="w-full bg-white border border-indigo-200 rounded-xl pl-8.5 pr-3 py-2 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  id="settings-add-tag-btn"
+                  disabled={!newTagInput.trim()}
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>ট্যাগ যোগ করুন</span>
+                </button>
+              </form>
+
+              {/* Custom Tags List */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700">
+                    আপনার তৈরি করা নিজস্ব ট্যাগসমূহ:
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    ট্যাগ মুছলে কাস্টমার খতিয়ান থেকেও সরানো হবে
+                  </span>
+                </div>
+
+                {customTags.length === 0 ? (
+                  <div className="bg-white/80 border border-dashed border-indigo-200 rounded-xl p-3 text-center">
+                    <p className="text-xs text-slate-500">
+                      এখনও কোনো নিজস্ব ট্যাগ তৈরি করা হয়নি। উপরের বক্সে নাম লিখে এখনই যুক্ত করুন।
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {customTags.map(tag => {
+                      const count = getCustomerCountForTag(tag);
+                      const isConfirming = tagToDeleteConfirm === tag;
+
+                      return (
+                        <div
+                          key={tag}
+                          className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-indigo-100 shadow-2xs hover:border-indigo-300 transition"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                            <span className="text-xs font-bold text-slate-800 truncate" title={tag}>
+                              {tag}
+                            </span>
+                            <span className="text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md border border-slate-200 shrink-0">
+                              {count > 0 ? `${count.toLocaleString('bn-BD')} জন` : 'ব্যবহৃত হয়নি'}
+                            </span>
+                          </div>
+
+                          {/* Actions: Inline Confirmation */}
+                          {isConfirming ? (
+                            <div className="flex items-center gap-1 shrink-0 ml-2">
+                              <span className="text-[10px] text-rose-600 font-bold">মুছবেন?</span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCustomTag(tag)}
+                                className="px-1.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[10px] font-bold cursor-pointer transition active:scale-95"
+                              >
+                                হ্যাঁ
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTagToDeleteConfirm(null)}
+                                className="px-1.5 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold cursor-pointer transition"
+                              >
+                                না
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setTagToDeleteConfirm(tag)}
+                              title={`"${tag}" ট্যাগ মুছে ফেলুন`}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition shrink-0 cursor-pointer ml-2"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Built-in Preset Tags Notice / Collapsible */}
+              <div className="pt-2 border-t border-indigo-100">
+                <button
+                  type="button"
+                  onClick={() => setShowPresetsPreview(prev => !prev)}
+                  className="flex items-center justify-between w-full text-left text-[11px] font-bold text-indigo-900 hover:text-indigo-700 cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>সিস্টেমের ডিফল্ট ট্যাগসমূহ দেখুন ({PRESET_CUSTOMER_TAGS.length}টি)</span>
+                  </span>
+                  <span className="text-[10px] text-indigo-600 font-semibold underline">
+                    {showPresetsPreview ? 'লুকান' : 'প্রদর্শন করুন'}
+                  </span>
+                </button>
+
+                {showPresetsPreview && (
+                  <div className="mt-2.5 pt-2 border-t border-indigo-100/60 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {PRESET_CUSTOMER_TAGS.map(preset => (
+                      <div
+                        key={preset.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-white/90 border border-slate-200 text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${preset.dotColor}`} />
+                          <span className="font-bold text-slate-800 text-[11px]">{preset.bnLabel}</span>
+                        </div>
+                        <span className="text-[9px] font-mono uppercase bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                          ডিফল্ট
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Android & Chrome App Installation Section */}
           <div className="pt-2 border-t border-slate-100">

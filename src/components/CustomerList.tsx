@@ -97,6 +97,17 @@ export const CustomerList: React.FC<CustomerListProps> = ({
       }
     });
 
+    const currentUserId = customers[0]?.userId || StorageService.getCurrentUser()?.id || '';
+    if (currentUserId) {
+      const storedTags = StorageService.getCustomTags(currentUserId);
+      storedTags.forEach(t => {
+        const norm = t.trim().toLowerCase();
+        if (!PRESET_CUSTOMER_TAGS.some(p => p.id === norm)) {
+          customSet.add(norm);
+        }
+      });
+    }
+
     return {
       tagCounts: counts,
       customTagsList: Array.from(customSet),

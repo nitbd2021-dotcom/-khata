@@ -926,6 +926,10 @@ export default function App() {
             StorageService.saveUser(updated);
             setCurrentUser(updated);
           }}
+          onCustomerUpdated={() => {
+            const updated = StorageService.getCustomers(currentUser.id);
+            setCustomers(updated);
+          }}
           onLogout={handleLogout}
           onOpenAuthModal={(mode) => {
             setLoginModalInitialMode(mode);

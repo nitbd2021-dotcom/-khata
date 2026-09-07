@@ -15,6 +15,7 @@ import {
 import { Customer } from '../types';
 import { PRESET_CUSTOMER_TAGS, getTagDefinition } from '../constants/customerTags';
 import { CustomerTagBadge } from './CustomerTagBadge';
+import { StorageService } from '../services/storageService';
 
 interface CustomerTagModalProps {
   isOpen: boolean;
@@ -32,32 +33,42 @@ export const CustomerTagModal: React.FC<CustomerTagModalProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
   const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [userCustomTags, setUserCustomTags] = useState<string[]>([]);
 
   useEffect(() => {
     if (customer) {
       setSelectedTags(customer.tags || []);
+      const pool = StorageService.getCustomTags(customer.userId || '');
+      setUserCustomTags(pool);
     }
   }, [customer]);
 
   if (!isOpen || !customer) return null;
 
   const toggleTag = (tagId: string) => {
+    const norm = tagId.trim().toLowerCase();
     setSelectedTags(prev => {
-      if (prev.includes(tagId)) {
-        return prev.filter(t => t !== tagId);
+      const exists = prev.some(t => t.toLowerCase() === norm);
+      if (exists) {
+        return prev.filter(t => t.toLowerCase() !== norm);
       } else {
-        return [...prev, tagId];
+        return [...prev, tagId.trim()];
       }
     });
   };
 
   const handleAddCustomTag = (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = customTagInput.trim().toLowerCase();
+    const clean = customTagInput.trim();
     if (!clean) return;
 
-    if (!selectedTags.includes(clean)) {
+    const lower = clean.toLowerCase();
+    if (!selectedTags.some(t => t.toLowerCase() === lower)) {
       setSelectedTags(prev => [...prev, clean]);
+    }
+    if (customer.userId) {
+      StorageService.addCustomTag(customer.userId, clean);
+      setUserCustomTags(StorageService.getCustomTags(customer.userId));
     }
     setCustomTagInput('');
     setIsAddingCustom(false);
@@ -208,6 +219,37 @@ export const CustomerTagModal: React.FC<CustomerTagModalProps> = ({
               })}
             </div>
           </div>
+
+          {/* User's Custom Tags Section (if any defined) */}
+          {userCustomTags.length > 0 && (
+            <div className="pt-2 border-t border-slate-100">
+              <label className="text-xs font-bold text-slate-700 block mb-2">
+                আপনার নিজস্ব ট্যাগসমূহ:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {userCustomTags.map(tag => {
+                  const norm = tag.trim().toLowerCase();
+                  const isSelected = selectedTags.some(t => t.toLowerCase() === norm);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Tag className="w-3 h-3" />
+                      <span>{tag}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-white ml-0.5" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Custom Tag Section */}
           <div className="pt-2 border-t border-slate-100">

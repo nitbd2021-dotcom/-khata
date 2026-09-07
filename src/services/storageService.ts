@@ -12,6 +12,7 @@ import {
   TransactionItemDetail,
   ModeratorProductTableRow
 } from '../types';
+import { PRESET_CUSTOMER_TAGS } from '../constants/customerTags';
 
 const STORAGE_USERS_KEY = 'khata_plus_users';
 const STORAGE_CUSTOMERS_KEY = 'khata_plus_customers';
@@ -22,6 +23,7 @@ const STORAGE_STOCK_LOGS_KEY = 'khata_plus_stock_logs';
 const STORAGE_DEVICE_KEY = 'khata_plus_device_session';
 const STORAGE_CURRENT_USER_KEY = 'khata_plus_current_user_id';
 const STORAGE_MODERATOR_PROD_TABLE_PREFIX = 'khata_plus_mod_prod_table_';
+const STORAGE_CUSTOM_TAGS_PREFIX = 'khata_plus_custom_tags_';
 export const ADMIN_EMAIL = 'jahidulraju87@gmail.com';
 export const ADMIN_PASSWORD = 'raju12158A+';
 const STORAGE_ADMIN_PIN = '7860'; // Alternative Master Admin PIN
@@ -983,6 +985,120 @@ export const StorageService = {
       return true;
     }
     return false;
+  },
+
+  // Custom Customer Tags Management
+  getCustomTags: (userId: string): string[] => {
+    if (!userId) return [];
+    const key = STORAGE_CUSTOM_TAGS_PREFIX + userId;
+    const raw = localStorage.getItem(key);
+    let customList: string[] = [];
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          customList = parsed.filter(t => typeof t === 'string' && t.trim().length > 0);
+        }
+      } catch (e) {
+        console.error('Error parsing custom tags', e);
+      }
+    }
+
+    // Also collect any unique custom tags that already exist on this user's customers
+    const customersRaw = localStorage.getItem(STORAGE_CUSTOMERS_KEY);
+    if (customersRaw) {
+      try {
+        const allCust: Customer[] = JSON.parse(customersRaw);
+        const userCust = allCust.filter(c => c.userId === userId);
+        userCust.forEach(c => {
+          if (Array.isArray(c.tags)) {
+            c.tags.forEach(t => {
+              const clean = (t || '').trim();
+              const lower = clean.toLowerCase();
+              if (
+                clean &&
+                !PRESET_CUSTOMER_TAGS.some(p => p.id === lower) &&
+                !customList.some(ct => ct.toLowerCase() === lower)
+              ) {
+                customList.push(clean);
+              }
+            });
+          }
+        });
+      } catch (e) {
+        console.error('Error reading customers for custom tags', e);
+      }
+    }
+
+    return customList;
+  },
+
+  addCustomTag: (userId: string, tag: string): { success: boolean; message: string; tags: string[] } => {
+    if (!userId) {
+      return { success: false, message: 'ইউজার পাওয়া যায়নি', tags: [] };
+    }
+    const clean = (tag || '').trim();
+    if (!clean) {
+      return { success: false, message: 'ট্যাগের নাম খালি হতে পারবে না', tags: StorageService.getCustomTags(userId) };
+    }
+
+    const lower = clean.toLowerCase();
+    if (PRESET_CUSTOMER_TAGS.some(p => p.id === lower || p.label.toLowerCase() === lower)) {
+      return { success: false, message: `"${clean}" এটি সিস্টেমের ডিফল্ট ট্যাগ হিসেবে ইতোমধ্যে বিদ্যমান`, tags: StorageService.getCustomTags(userId) };
+    }
+
+    const current = StorageService.getCustomTags(userId);
+    if (current.some(t => t.toLowerCase() === lower)) {
+      return { success: false, message: `"${clean}" ট্যাগটি ইতোমধ্যে তালিকায় রয়েছে`, tags: current };
+    }
+
+    const updated = [...current, clean];
+    localStorage.setItem(STORAGE_CUSTOM_TAGS_PREFIX + userId, JSON.stringify(updated));
+    return { success: true, message: `"${clean}" ট্যাগ সফলভাবে তৈরি করা হয়েছে`, tags: updated };
+  },
+
+  deleteCustomTag: (userId: string, tagToDelete: string): { success: boolean; affectedCustomerCount: number; message: string; tags: string[] } => {
+    if (!userId) {
+      return { success: false, affectedCustomerCount: 0, message: 'ইউজার পাওয়া যায়নি', tags: [] };
+    }
+    const lower = (tagToDelete || '').trim().toLowerCase();
+    const current = StorageService.getCustomTags(userId);
+    const updated = current.filter(t => t.trim().toLowerCase() !== lower);
+    localStorage.setItem(STORAGE_CUSTOM_TAGS_PREFIX + userId, JSON.stringify(updated));
+
+    // Also remove this tag from all customers belonging to this user
+    let affectedCount = 0;
+    const raw = localStorage.getItem(STORAGE_CUSTOMERS_KEY);
+    if (raw) {
+      try {
+        const all: Customer[] = JSON.parse(raw);
+        let modified = false;
+        all.forEach(c => {
+          if (c.userId === userId && Array.isArray(c.tags)) {
+            const hasTag = c.tags.some(t => t.trim().toLowerCase() === lower);
+            if (hasTag) {
+              c.tags = c.tags.filter(t => t.trim().toLowerCase() !== lower);
+              affectedCount++;
+              modified = true;
+            }
+          }
+        });
+        if (modified) {
+          localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.stringify(all));
+        }
+      } catch (e) {
+        console.error('Error updating customers on tag deletion', e);
+      }
+    }
+
+    return { 
+      success: true, 
+      affectedCustomerCount: affectedCount, 
+      message: affectedCount > 0 
+        ? `"${tagToDelete}" ট্যাগ মুছে ফেলা হয়েছে এবং ${affectedCount} জন কাস্টমার থেকে রিমুভ করা হয়েছে`
+        : `"${tagToDelete}" ট্যাগ সফলভাবে মুছে ফেলা হয়েছে`, 
+      tags: updated 
+    };
   },
 
   // Transactions
