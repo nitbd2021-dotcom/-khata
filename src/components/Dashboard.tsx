@@ -411,54 +411,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
         
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           
           {/* টাকা পেলাম (Payment Received / বাকি আদায়) */}
           <button
             onClick={() => onOpenAddTx('payment_received')}
-            className="flex flex-col items-center justify-center p-2.5 sm:p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 transition active:scale-95 group cursor-pointer"
+            className="flex items-center sm:flex-col sm:justify-center p-3.5 sm:p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100/90 border border-emerald-200 text-emerald-800 transition active:scale-[0.98] group cursor-pointer gap-3 sm:gap-1.5 shadow-2xs"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mb-1 shadow-sm group-hover:scale-105 transition">
-              <ArrowDownLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition">
+              <ArrowDownLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <span className="font-bold text-xs sm:text-base">টাকা পেলাম</span>
-            <span className="text-[10px] sm:text-[11px] text-emerald-700 font-medium">বাকি টাকা আদায়</span>
+            <div className="text-left sm:text-center min-w-0">
+              <span className="font-bold text-sm sm:text-base block">টাকা পেলাম</span>
+              <span className="text-[11px] sm:text-xs text-emerald-700 font-medium block">বাকি টাকা আদায় (জমা)</span>
+            </div>
           </button>
 
           {/* বাকি দিলাম (Credit Given) */}
           <button
             onClick={() => onOpenAddTx('credit_given')}
-            className="flex flex-col items-center justify-center p-2.5 sm:p-4 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-800 transition active:scale-95 group cursor-pointer"
+            className="flex items-center sm:flex-col sm:justify-center p-3.5 sm:p-4 rounded-2xl bg-red-50 hover:bg-red-100/90 border border-red-200 text-red-800 transition active:scale-[0.98] group cursor-pointer gap-3 sm:gap-1.5 shadow-2xs"
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-red-600 text-white flex items-center justify-center mb-1 shadow-sm group-hover:scale-105 transition">
-              <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition">
+              <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <span className="font-bold text-xs sm:text-base">বাকি দিলাম</span>
-            <span className="text-[10px] sm:text-[11px] text-red-700 font-medium">পাওনা যোগ হবে</span>
-          </button>
-
-          {/* বাকি নিলাম (Credit Taken) */}
-          <button
-            onClick={() => onOpenAddTx('credit_taken')}
-            className="flex flex-col items-center justify-center p-2.5 sm:p-4 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 transition active:scale-95 group cursor-pointer"
-          >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-600 text-white flex items-center justify-center mb-1 shadow-sm group-hover:scale-105 transition">
-              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="text-left sm:text-center min-w-0">
+              <span className="font-bold text-sm sm:text-base block">বাকি দিলাম</span>
+              <span className="text-[11px] sm:text-xs text-red-700 font-medium block">কাস্টমার পাওনা যোগ হবে</span>
             </div>
-            <span className="font-bold text-xs sm:text-base">বাকি নিলাম</span>
-            <span className="text-[10px] sm:text-[11px] text-purple-700 font-medium">দেনা যোগ হবে</span>
-          </button>
-
-          {/* ধার লেনদেন (Loan) */}
-          <button
-            onClick={() => onOpenAddTx('loan_given')}
-            className="flex flex-col items-center justify-center p-2.5 sm:p-4 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 transition active:scale-95 group cursor-pointer"
-          >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center mb-1 shadow-sm group-hover:scale-105 transition">
-              <HandCoins className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <span className="font-bold text-xs sm:text-base">ধার লেনদেন</span>
-            <span className="text-[10px] sm:text-[11px] text-blue-700 font-medium">কর্জ আদান-প্রদান</span>
           </button>
 
         </div>
@@ -845,16 +825,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 }`}
               >
                 টাকা পেলাম
-              </button>
-              <button
-                onClick={() => setFilterType('payable')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-                  filterType === 'payable'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                বাকি নিলাম
               </button>
             </div>
           </div>

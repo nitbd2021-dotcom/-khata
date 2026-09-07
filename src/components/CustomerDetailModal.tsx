@@ -26,12 +26,19 @@ import {
   Bookmark,
   Save,
   Sparkles,
-  Download
+  Download,
+  Trash2,
+  Calendar,
+  RotateCw,
+  Tag,
+  Ban
 } from 'lucide-react';
-import { Customer, Transaction, TransactionType, User } from '../types';
+import { Customer, Transaction, TransactionType, User, PaymentMethod } from '../types';
 import { formatBanglaPaymentMethod, formatBanglaTxType } from '../services/googleSheetsService';
 import { CustomerQRCodeModal } from './CustomerQRCodeModal';
 import { CustomerStatementModal } from './CustomerStatementModal';
+import { CustomerTagList } from './CustomerTagBadge';
+import { CustomerTagModal } from './CustomerTagModal';
 import { StorageService } from '../services/storageService';
 import { BanglaSpeechRecognizer, speakBanglaText, stopSpeaking } from '../services/voiceService';
 
@@ -54,6 +61,17 @@ interface CustomerDetailModalProps {
   isModerator?: boolean;
   onCustomerUpdated?: () => void;
   onViewReceipt?: (transaction: Transaction, customer: Customer) => void;
+  onEditTransaction?: (
+    tx: Transaction,
+    updates: {
+      amount?: number;
+      type?: TransactionType;
+      description?: string;
+      date?: string;
+      paymentMethod?: PaymentMethod | string;
+    }
+  ) => void | Promise<void>;
+  onDeleteTransaction?: (txId: string) => void | Promise<void>;
 }
 
 export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
@@ -66,12 +84,18 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   isModerator = false,
   onCustomerUpdated,
   onViewReceipt,
+  onEditTransaction,
+  onDeleteTransaction,
 }) => {
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
   const [isEditingLimit, setIsEditingLimit] = useState(false);
   const [limitInput, setLimitInput] = useState<string>('');
   const [currentCreditLimit, setCurrentCreditLimit] = useState<number | undefined>(customer?.creditLimit);
+
+  // Customer Tagging State
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [customerTags, setCustomerTags] = useState<string[]>(customer?.tags || []);
 
   // Private Internal Notes state for DSR
   const [noteText, setNoteText] = useState<string>(customer?.note || '');
@@ -86,13 +110,25 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     setCurrentCreditLimit(customer?.creditLimit);
     setLimitInput(customer?.creditLimit ? String(customer.creditLimit) : '');
     setIsEditingLimit(false);
+    setCustomerTags(customer?.tags || []);
     setNoteText(customer?.note || '');
     setNoteSavedFeedback(false);
     setNoteVoiceStatus('');
     setIsListeningNote(false);
     setIsPlayingAudio(false);
     stopSpeaking();
-  }, [customer?.id, customer?.creditLimit, customer?.note]);
+  }, [customer?.id, customer?.creditLimit, customer?.note, customer?.tags]);
+
+  const handleSaveCustomerTags = (customerId: string, updatedTags: string[]) => {
+    StorageService.updateCustomerTags(customerId, updatedTags);
+    setCustomerTags(updatedTags);
+    if (customer) {
+      customer.tags = updatedTags;
+    }
+    if (onCustomerUpdated) {
+      onCustomerUpdated();
+    }
+  };
 
   // Clean up voice recognition and speech synthesis on unmount / close
   useEffect(() => {
@@ -231,6 +267,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const effectiveLimit = hasSpecificLimit ? currentCreditLimit : (user.dueThreshold ?? 2500);
   const isLimitExceeded = customer.netBalance > effectiveLimit;
   const exceededDiff = isLimitExceeded ? customer.netBalance - effectiveLimit : 0;
+  const isBlocked = customerTags.map(t => t.toLowerCase()).includes('blocked');
 
   // Filter transactions for this specific customer
   const customerTxs = transactions
@@ -252,6 +289,97 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // Edit & Delete Transaction States
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [editAmount, setEditAmount] = useState<string>('');
+  const [editType, setEditType] = useState<TransactionType>('payment_received');
+  const [editDescription, setEditDescription] = useState<string>('');
+  const [editDate, setEditDate] = useState<string>('');
+  const [editPaymentMethod, setEditPaymentMethod] = useState<string>('cash');
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string>('');
+
+  const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  const handleOpenEdit = (tx: Transaction) => {
+    setEditingTx(tx);
+    setEditAmount(String(tx.amount));
+    setEditType(tx.type);
+    setEditDescription(tx.description || '');
+    setEditDate(tx.date ? new Date(tx.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+    setEditPaymentMethod(tx.paymentMethod || 'cash');
+    setEditError('');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTx) return;
+
+    const numAmount = parseFloat(editAmount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setEditError('অনুগ্রহ করে সঠিক টাকার পরিমাণ লিখুন (০ এর বেশি হতে হবে)');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError('');
+
+    try {
+      const updates = {
+        amount: numAmount,
+        type: editType,
+        description: editDescription.trim(),
+        date: editDate ? new Date(editDate + 'T' + (new Date(editingTx.date).toTimeString().split(' ')[0] || '12:00:00')).toISOString() : editingTx.date,
+        paymentMethod: editPaymentMethod,
+      };
+
+      if (onEditTransaction) {
+        await onEditTransaction(editingTx, updates);
+      } else {
+        StorageService.updateTransaction(user.id, editingTx.id, updates);
+        if (onCustomerUpdated) onCustomerUpdated();
+      }
+
+      setEditingTx(null);
+      setActionFeedback('✓ লেনদেন সফলভাবে সংশোধন করা হয়েছে এবং গুগল শিটে লাইভ সিঙ্ক সম্পন্ন হয়েছে!');
+      setTimeout(() => setActionFeedback(null), 4000);
+    } catch (err: any) {
+      setEditError(err.message || 'লেনদেন সংশোধন করতে সমস্যা হয়েছে');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleOpenDelete = (tx: Transaction) => {
+    setDeletingTx(tx);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTx) return;
+
+    setIsDeleting(true);
+    try {
+      if (onDeleteTransaction) {
+        await onDeleteTransaction(deletingTx.id);
+      } else {
+        StorageService.deleteTransaction(user.id, deletingTx.id);
+        if (onCustomerUpdated) onCustomerUpdated();
+      }
+
+      setDeletingTx(null);
+      setActionFeedback('✓ লেনদেন মুছে ফেলা হয়েছে এবং কাস্টমার ব্যালেন্স ও গুগল শিট পুনর্নির্ধারণ করা হয়েছে!');
+      setTimeout(() => setActionFeedback(null), 4000);
+    } catch (err: any) {
+      console.error('Failed to delete transaction:', err);
+      setActionFeedback('❌ লেনদেন মুছতে সমস্যা হয়েছে');
+      setTimeout(() => setActionFeedback(null), 4000);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -278,6 +406,25 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                 {customer.phone || 'মোবাইল নম্বর নেই'} {customer.address ? `• ${customer.address}` : ''}
               </p>
+              {/* Header Tags Display */}
+              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                <CustomerTagList
+                  tags={customerTags}
+                  onTagClick={() => setIsTagModalOpen(true)}
+                  onAddTagClick={() => setIsTagModalOpen(true)}
+                  size="sm"
+                />
+                <button
+                  type="button"
+                  id="customer-header-manage-tags-btn"
+                  onClick={() => setIsTagModalOpen(true)}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 text-[10px] font-bold transition border border-slate-200 cursor-pointer"
+                  title="ট্যাগ পরিচালনা করুন"
+                >
+                  <Tag className="w-2.5 h-2.5" />
+                  <span>ট্যাগ পরিবর্তন</span>
+                </button>
+              </div>
             </div>
           </div>
           <button
@@ -322,6 +469,68 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </span>
             </div>
           )}
+
+          {/* Blocked Customer Alert Banner */}
+          {isBlocked && (
+            <div className="p-3.5 rounded-2xl bg-red-100/90 border border-red-300 text-red-950 flex items-center justify-between gap-3 print:hidden">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Ban className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-red-900">
+                    এই কাস্টমারকে &lsquo;স্থগিত / ব্লকড&rsquo; হিসেবে চিহ্নিত করা হয়েছে!
+                  </h4>
+                  <p className="text-[11px] text-red-800 mt-0.5">
+                    বকেয়া বাকি প্রদান সাময়িকভাবে স্থগিত রাখতে সতর্ক করা হচ্ছে।
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="customer-blocked-edit-tag-btn"
+                onClick={() => setIsTagModalOpen(true)}
+                className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition cursor-pointer shrink-0 shadow-xs"
+              >
+                ট্যাগ পরিবর্তন
+              </button>
+            </div>
+          )}
+
+          {/* Customer Tags & Category Management Card */}
+          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                <Tag className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-slate-800">কাস্টমার শ্রেণিবিভাগ ও ট্যাগ</span>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    (যেমন: নিয়মিত, পাইকারি, ভিআইপি, স্থগিত ইত্যাদি)
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                  <CustomerTagList
+                    tags={customerTags}
+                    onTagClick={() => setIsTagModalOpen(true)}
+                    onAddTagClick={() => setIsTagModalOpen(true)}
+                    size="md"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              id="customer-detail-manage-tags-btn"
+              onClick={() => setIsTagModalOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition border border-slate-200 shadow-2xs cursor-pointer shrink-0"
+            >
+              <Tag className="w-3.5 h-3.5 text-slate-500" />
+              <span>ট্যাগ পরিচালনা</span>
+            </button>
+          </div>
 
           {/* Customer Credit Limit Section (Configured by Moderator) */}
           <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl print:hidden flex items-center justify-between gap-3">
@@ -658,6 +867,14 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </div>
             </div>
 
+            {/* Action Feedback Banner (Edit / Delete / Sync Status) */}
+            {actionFeedback && (
+              <div className="mb-3 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{actionFeedback}</span>
+              </div>
+            )}
+
             {customerTxs.length === 0 ? (
               <div className="border border-slate-200 rounded-2xl p-6 text-center text-slate-400 bg-slate-50/50 text-xs">
                 এই কাস্টমারের এখনও কোনো লেনদেন নেই
@@ -705,8 +922,8 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Balance After Footer & Receipt Action */}
-                        <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                        {/* Balance After Footer & Action Buttons */}
+                        <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[11px] flex-wrap">
                           <div className="flex items-center gap-1.5">
                             <span className="text-slate-500 font-medium">চলমান ব্যালেন্স:</span>
                             <span className="font-bold text-slate-800">
@@ -714,19 +931,48 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             </span>
                           </div>
 
-                          {onViewReceipt && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            {onViewReceipt && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onViewReceipt(t, customer);
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-[10px] transition cursor-pointer shadow-2xs"
+                                title="রসিদ দেখুন ও WhatsApp-এ পাঠান"
+                              >
+                                <Receipt className="w-3 h-3 text-teal-600" />
+                                <span>রসিদ</span>
+                              </button>
+                            )}
+
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onViewReceipt(t, customer);
+                                handleOpenEdit(t);
                               }}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-[10px] transition cursor-pointer shadow-2xs"
-                              title="রসিদ দেখুন ও WhatsApp-এ পাঠান"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold text-[10px] transition cursor-pointer shadow-2xs"
+                              title="লেনদেন সংশোধন করুন"
                             >
-                              <Receipt className="w-3 h-3 text-teal-600" />
-                              <span>রসিদ</span>
+                              <Edit2 className="w-3 h-3 text-blue-600" />
+                              <span>এডিট</span>
                             </button>
-                          )}
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDelete(t);
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[10px] transition cursor-pointer shadow-2xs"
+                              title="লেনদেন মুছে ফেলুন"
+                            >
+                              <Trash2 className="w-3 h-3 text-rose-600" />
+                              <span>মুছুন</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -735,14 +981,14 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
                 {/* Tablet / Desktop View: Clean Scrollable Table */}
                 <div className="hidden sm:block border border-slate-200 rounded-2xl overflow-x-auto">
-                  <table className="w-full text-left text-xs min-w-[460px]">
+                  <table className="w-full text-left text-xs min-w-[500px]">
                     <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                       <tr>
                         <th className="p-3 whitespace-nowrap">তারিখ</th>
                         <th className="p-3">বিবরণ ও ধরন</th>
                         <th className="p-3 text-right whitespace-nowrap">টাকা (৳)</th>
                         <th className="p-3 text-right whitespace-nowrap">চলমান ব্যালেন্স</th>
-                        <th className="p-3 text-center whitespace-nowrap">রসিদ</th>
+                        <th className="p-3 text-center whitespace-nowrap">অ্যাকশন ও রসিদ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -775,16 +1021,39 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                               ৳{t.balanceAfter.toLocaleString('bn-BD')}
                             </td>
                             <td className="p-3 text-center whitespace-nowrap">
-                              {onViewReceipt && (
+                              <div className="flex items-center justify-center gap-1.5">
+                                {onViewReceipt && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onViewReceipt(t, customer)}
+                                    className="inline-flex items-center gap-1 px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-[11px] font-bold transition cursor-pointer shadow-2xs"
+                                    title="রসিদ দেখুন ও WhatsApp-এ পাঠান"
+                                  >
+                                    <Receipt className="w-3 h-3 text-teal-600" />
+                                    <span>রসিদ</span>
+                                  </button>
+                                )}
+
                                 <button
-                                  onClick={() => onViewReceipt(t, customer)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-[11px] font-bold transition cursor-pointer shadow-2xs"
-                                  title="রসিদ দেখুন ও WhatsApp-এ পাঠান"
+                                  type="button"
+                                  onClick={() => handleOpenEdit(t)}
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold transition cursor-pointer shadow-2xs"
+                                  title="লেনদেন সংশোধন করুন"
                                 >
-                                  <Receipt className="w-3 h-3 text-teal-600" />
-                                  <span>রসিদ</span>
+                                  <Edit2 className="w-3 h-3 text-blue-600" />
+                                  <span>এডিট</span>
                                 </button>
-                              )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenDelete(t)}
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-bold transition cursor-pointer shadow-2xs"
+                                  title="লেনদেন মুছে ফেলুন"
+                                >
+                                  <Trash2 className="w-3 h-3 text-rose-600" />
+                                  <span>মুছুন</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -799,6 +1068,285 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         </div>
 
       </div>
+
+      {/* Edit Transaction Modal */}
+      {editingTx && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden my-auto max-h-[95vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-700 to-indigo-700 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs">
+                  <Edit2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold">লেনদেন সংশোধন</h3>
+                  <p className="text-xs text-blue-100 font-medium">
+                    {customer.name} • লাইভ গুগল শিট সিঙ্ক
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTx(null)}
+                className="p-1.5 text-blue-100 hover:text-white hover:bg-white/10 rounded-full transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSaveEdit} className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+              {editError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{editError}</span>
+                </div>
+              )}
+
+              {/* Transaction Type Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  লেনদেনের ধরন নির্বাচন করুন
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditType('credit_given')}
+                    className={`p-2.5 rounded-xl border text-xs font-bold text-left transition flex flex-col gap-0.5 cursor-pointer ${
+                      editType === 'credit_given'
+                        ? 'bg-rose-50 border-rose-500 text-rose-900 ring-2 ring-rose-500/20'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="font-extrabold text-rose-700">বাকি দিলাম</span>
+                    <span className="text-[10px] text-slate-500 font-normal">পাওনা বাড়বে</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditType('payment_received')}
+                    className={`p-2.5 rounded-xl border text-xs font-bold text-left transition flex flex-col gap-0.5 cursor-pointer ${
+                      editType === 'payment_received'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="font-extrabold text-emerald-700">টাকা পেলাম</span>
+                    <span className="text-[10px] text-slate-500 font-normal">পাওনা কমবে</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  টাকার পরিমাণ (৳) <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">
+                    ৳
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="any"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    placeholder="০.০০"
+                    required
+                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-lg font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                  />
+                </div>
+                {/* Quick Add Buttons */}
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  {[100, 500, 1000, 2000, 5000].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => {
+                        const current = parseFloat(editAmount) || 0;
+                        setEditAmount(String(current + num));
+                      }}
+                      className="px-2 py-0.5 text-[11px] font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-lg border border-slate-200 transition cursor-pointer"
+                    >
+                      +{num.toLocaleString('bn-BD')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  বিবরণ বা পণ্যের নাম
+                </label>
+                <input
+                  type="text"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="যেমন: চাল, ডাল, নগদ জমা বা নোট"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Date & Payment Method Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    তারিখ
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    পেমেন্ট মাধ্যম
+                  </label>
+                  <select
+                    value={editPaymentMethod}
+                    onChange={(e) => setEditPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="cash">নগদ (Cash)</option>
+                    <option value="bkash">বিকাশ (bKash)</option>
+                    <option value="nagad">নগদ (Nagad)</option>
+                    <option value="rocket">রকেট (Rocket)</option>
+                    <option value="bank">ব্যাংক (Bank)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Auto Sync Notice */}
+              <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-start gap-2 text-xs text-blue-900">
+                <RotateCw className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  পরিবর্তন সংরক্ষণের সাথে সাথেই কাস্টমারের মোট বাকি এবং গুগল শিটের হিসাব স্বয়ংক্রিয়ভাবে লাইভ আপডেট হয়ে যাবে।
+                </p>
+              </div>
+
+              {/* Footer Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingTx(null)}
+                  disabled={isSavingEdit}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingEdit ? (
+                    <>
+                      <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>সংরক্ষণ ও সিঙ্ক হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>সংরক্ষণ ও গুগল শিটে সিঙ্ক</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Transaction Confirmation Modal */}
+      {deletingTx && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-5 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
+                <Trash2 className="w-6 h-6 text-rose-600" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mb-1">
+                লেনদেনটি কি মুছে ফেলতে চান?
+              </h3>
+              <p className="text-xs text-slate-500 mb-4">
+                এই লেনদেনটি মুছে দিলে কাস্টমারের খতিয়ান ও গুগল শিট স্বয়ংক্রিয়ভাবে পুনর্নির্ধারণ করা হবে।
+              </p>
+
+              {/* Transaction Summary Card */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs space-y-1.5 mb-4">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">কাস্টমার:</span>
+                  <span className="font-bold text-slate-800">{customer.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">তারিখ:</span>
+                  <span className="font-bold text-slate-800">
+                    {new Date(deletingTx.date).toLocaleDateString('bn-BD')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">ধরন:</span>
+                  <span className="font-bold text-slate-800">
+                    {formatBanglaTxType(deletingTx.type)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">টাকার পরিমাণ:</span>
+                  <span className="font-black text-rose-600">
+                    ৳{deletingTx.amount.toLocaleString('bn-BD')}
+                  </span>
+                </div>
+                {deletingTx.description && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-medium">বিবরণ:</span>
+                    <span className="font-medium text-slate-700 truncate max-w-[200px]">
+                      {deletingTx.description}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingTx(null)}
+                  disabled={isDeleting}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+                >
+                  {isDeleting ? (
+                    <>
+                      <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>মুছে ফেলা হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>হ্যাঁ, মুছুন ও সিঙ্ক করুন</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Customer QR Code Generator & Card Modal */}
       {isQrModalOpen && (
@@ -818,6 +1366,16 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           customer={customer}
           transactions={transactions}
           user={user}
+        />
+      )}
+
+      {/* Customer Tag Manager Modal */}
+      {isTagModalOpen && customer && (
+        <CustomerTagModal
+          isOpen={isTagModalOpen}
+          customer={{ ...customer, tags: customerTags }}
+          onClose={() => setIsTagModalOpen(false)}
+          onSaveTags={handleSaveCustomerTags}
         />
       )}
     </div>

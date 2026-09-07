@@ -16,9 +16,15 @@ import {
   FileText,
   Smartphone,
   X,
-  Sparkles
+  Sparkles,
+  Tag,
+  Ban
 } from 'lucide-react';
 import { Customer } from '../types';
+import { PRESET_CUSTOMER_TAGS } from '../constants/customerTags';
+import { CustomerTagList } from './CustomerTagBadge';
+import { CustomerTagModal } from './CustomerTagModal';
+import { StorageService } from '../services/storageService';
 
 // Convert Bangla numerals (০-৯) to English digits (0-9) for seamless phone searching
 const banglaToEnglishDigits = (str: string): string => {
@@ -40,6 +46,7 @@ interface CustomerListProps {
   onViewQRCode?: (customer: Customer) => void;
   onViewStatement?: (customer: Customer) => void;
   onOpenPhoneContacts?: () => void;
+  onCustomerUpdated?: () => void;
 }
 
 export const CustomerList: React.FC<CustomerListProps> = ({
@@ -53,47 +60,90 @@ export const CustomerList: React.FC<CustomerListProps> = ({
   onViewQRCode,
   onViewStatement,
   onOpenPhoneContacts,
+  onCustomerUpdated,
 }) => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'receivable' | 'payable' | 'cleared' | 'exceeded'>('all');
   const [sortBy, setSortBy] = useState<'balance_desc' | 'name' | 'recent'>('balance_desc');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string>('all');
+  const [tagModalCustomer, setTagModalCustomer] = useState<Customer | null>(null);
 
   const threshold = Math.max(0, dueThreshold);
   const getCustomerLimit = (c: Customer) => (typeof c.creditLimit === 'number' && c.creditLimit > 0) ? c.creditLimit : threshold;
   const exceededCustomers = customers.filter(c => c.netBalance > 0 && c.netBalance > getCustomerLimit(c));
   const exceededCount = exceededCustomers.length;
 
-  // Real-time Search & Filter: filters as user types by name or phone number
+  // Calculate tag counts and gather any user-created custom tags
+  const { tagCounts, customTagsList } = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: customers.length,
+      regular: 0,
+      wholesale: 0,
+      blocked: 0,
+      vip: 0,
+      retail: 0,
+    };
+    const customSet = new Set<string>();
+
+    customers.forEach(c => {
+      if (c.tags && Array.isArray(c.tags)) {
+        c.tags.forEach(t => {
+          const norm = t.trim().toLowerCase();
+          counts[norm] = (counts[norm] || 0) + 1;
+          if (!PRESET_CUSTOMER_TAGS.some(p => p.id === norm)) {
+            customSet.add(norm);
+          }
+        });
+      }
+    });
+
+    return {
+      tagCounts: counts,
+      customTagsList: Array.from(customSet),
+    };
+  }, [customers]);
+
+  // Real-time Search & Filter: filters as user types by name, phone, code, tag, or balance status
   const filtered = useMemo(() => {
     const rawSearch = search.trim().toLowerCase();
     const queryDigits = banglaToEnglishDigits(rawSearch);
 
     return customers.filter(c => {
+      // 1. Tag-based filtering
+      if (selectedTagFilter !== 'all') {
+        if (!c.tags || !c.tags.map(t => t.toLowerCase()).includes(selectedTagFilter.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // 2. Real-time Search query matching
       if (rawSearch) {
         const nameLower = c.name.toLowerCase();
         const phone = c.phone.trim();
         const phoneDigits = banglaToEnglishDigits(phone);
         const codeLower = (c.code || '').toLowerCase();
         const addressLower = (c.address || '').toLowerCase();
+        const tagsJoined = (c.tags || []).join(' ').toLowerCase();
 
-        // Real-time matching for customer name, phone number, unique code, or address
         const matchesName = nameLower.includes(rawSearch) || nameLower.includes(queryDigits);
         const matchesPhone = phone.includes(rawSearch) || phoneDigits.includes(queryDigits) || phone.includes(queryDigits);
         const matchesCode = codeLower.includes(rawSearch) || codeLower.includes(queryDigits);
         const matchesAddress = addressLower.includes(rawSearch);
+        const matchesTag = tagsJoined.includes(rawSearch);
 
-        if (!matchesName && !matchesPhone && !matchesCode && !matchesAddress) {
+        if (!matchesName && !matchesPhone && !matchesCode && !matchesAddress && !matchesTag) {
           return false;
         }
       }
 
+      // 3. Status filter
       if (filter === 'receivable') return c.netBalance > 0;
       if (filter === 'payable') return c.netBalance < 0;
       if (filter === 'cleared') return c.netBalance === 0;
       if (filter === 'exceeded') return c.netBalance > 0 && c.netBalance > threshold;
       return true;
     });
-  }, [customers, search, filter, threshold]);
+  }, [customers, search, filter, selectedTagFilter, threshold]);
 
   // Sort customers
   const sorted = useMemo(() => {
@@ -104,6 +154,17 @@ export const CustomerList: React.FC<CustomerListProps> = ({
       return 0;
     });
   }, [filtered, sortBy]);
+
+  const handleSaveCustomerTags = (customerId: string, updatedTags: string[]) => {
+    StorageService.updateCustomerTags(customerId, updatedTags);
+    const target = customers.find(c => c.id === customerId);
+    if (target) {
+      target.tags = updatedTags;
+    }
+    if (onCustomerUpdated) {
+      onCustomerUpdated();
+    }
+  };
 
   const totalReceivable = customers.reduce((sum, c) => sum + (c.netBalance > 0 ? c.netBalance : 0), 0);
   const totalPayable = customers.reduce((sum, c) => sum + (c.netBalance < 0 ? Math.abs(c.netBalance) : 0), 0);
@@ -279,6 +340,95 @@ export const CustomerList: React.FC<CustomerListProps> = ({
             </select>
           </div>
         </div>
+
+        {/* Customer Category & Tag Filter Row */}
+        <div className="pt-2.5 border-t border-slate-100 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+              <Tag className="w-3.5 h-3.5 text-emerald-600" />
+              <span>কাস্টমার ট্যাগ ফিল্টার:</span>
+            </div>
+            {selectedTagFilter !== 'all' && (
+              <button
+                type="button"
+                id="customer-tag-clear-btn"
+                onClick={() => setSelectedTagFilter('all')}
+                className="text-[11px] font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer transition"
+              >
+                <X className="w-3 h-3" />
+                <span>ট্যাগ ফিল্টার মুছুন</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-wrap">
+            <button
+              type="button"
+              id="customer-tag-filter-all"
+              onClick={() => setSelectedTagFilter('all')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 border ${
+                selectedTagFilter === 'all'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+              }`}
+            >
+              সব ({customers.length})
+            </button>
+
+            {PRESET_CUSTOMER_TAGS.map(tagDef => {
+              const count = tagCounts[tagDef.id] || 0;
+              const isSelected = selectedTagFilter === tagDef.id;
+              return (
+                <button
+                  key={tagDef.id}
+                  type="button"
+                  id={`customer-tag-filter-${tagDef.id}`}
+                  onClick={() => setSelectedTagFilter(isSelected ? 'all' : tagDef.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 border ${
+                    isSelected
+                      ? tagDef.activeFilterClass
+                      : count > 0
+                      ? `${tagDef.badgeClass} hover:opacity-90`
+                      : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+                  }`}
+                  title={tagDef.description}
+                >
+                  <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : tagDef.dotColor}`} />
+                  <span>{tagDef.bnLabel}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                    isSelected ? 'bg-black/25 text-white' : 'bg-black/5 text-slate-700 font-black'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+
+            {customTagsList.map(customTag => {
+              const count = tagCounts[customTag] || 0;
+              const isSelected = selectedTagFilter === customTag;
+              return (
+                <button
+                  key={customTag}
+                  type="button"
+                  id={`customer-tag-filter-custom-${customTag}`}
+                  onClick={() => setSelectedTagFilter(isSelected ? 'all' : customTag)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 border ${
+                    isSelected
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  <Tag className="w-3 h-3 text-slate-500" />
+                  <span>{customTag}</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-black/5 font-black">
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Visual Threshold Alert Bar */}
@@ -370,12 +520,24 @@ export const CustomerList: React.FC<CustomerListProps> = ({
                 <span>সার্চ মুছে সব কাস্টমার দেখুন</span>
               </button>
             )}
+            {selectedTagFilter !== 'all' && (
+              <button
+                id="customer-empty-clear-tag-btn"
+                type="button"
+                onClick={() => setSelectedTagFilter('all')}
+                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer border border-slate-300"
+              >
+                <Tag className="w-3.5 h-3.5 text-slate-500" />
+                <span>ট্যাগ ফিল্টার তুলে সব দেখুন</span>
+              </button>
+            )}
           </div>
         ) : (
           sorted.map(customer => {
             const isReceivable = customer.netBalance > 0;
             const isPayable = customer.netBalance < 0;
             const isCleared = customer.netBalance === 0;
+            const isBlocked = (customer.tags || []).map(t => t.toLowerCase()).includes('blocked');
             const custLimit = getCustomerLimit(customer);
             const isExceeded = isReceivable && customer.netBalance > custLimit;
             const exceededDiff = isExceeded ? customer.netBalance - custLimit : 0;
@@ -385,7 +547,9 @@ export const CustomerList: React.FC<CustomerListProps> = ({
               <div
                 key={customer.id}
                 className={`rounded-2xl p-4 sm:p-5 transition flex flex-col justify-between relative overflow-hidden ${
-                  isExceeded
+                  isBlocked
+                    ? 'bg-gradient-to-br from-red-50/50 via-white to-slate-50 border-2 border-red-300 shadow-2xs hover:border-red-400 ring-1 ring-red-300/40'
+                    : isExceeded
                     ? 'bg-gradient-to-br from-red-50/70 via-white to-amber-50/30 border-2 border-red-400 shadow-xs hover:border-red-500 hover:shadow-md ring-2 ring-red-500/10'
                     : 'bg-white border border-slate-200 hover:border-emerald-300 shadow-2xs hover:shadow-sm'
                 }`}
@@ -416,13 +580,15 @@ export const CustomerList: React.FC<CustomerListProps> = ({
                     <div className="flex items-center space-x-3">
                       <div className="relative">
                         <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-base shrink-0 ${
-                          isExceeded
+                          isBlocked
+                            ? 'bg-red-100 text-red-800 ring-2 ring-red-400/50'
+                            : isExceeded
                             ? 'bg-red-100 text-red-800 ring-2 ring-red-400/50'
                             : 'bg-emerald-100 text-emerald-800'
                         }`}>
-                          {customer.name.charAt(0)}
+                          {isBlocked ? <Ban className="w-5 h-5 text-red-600" /> : customer.name.charAt(0)}
                         </div>
-                        {isExceeded && (
+                        {isExceeded && !isBlocked && (
                           <div 
                             className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-black shadow-xs"
                             title="বাকি সীমা ছাড়িয়েছে"
@@ -499,11 +665,34 @@ export const CustomerList: React.FC<CustomerListProps> = ({
                     </div>
                   </div>
 
-                  {customer.address && (
-                    <p className="text-xs text-slate-500 flex items-center gap-1 mb-2">
-                      <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                      <span className="truncate">{customer.address}</span>
-                    </p>
+                  {/* Customer Tags Display */}
+                  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                    <CustomerTagList
+                      tags={customer.tags}
+                      onTagClick={(tagId) => setSelectedTagFilter(tagId)}
+                      onAddTagClick={() => setTagModalCustomer(customer)}
+                      size="sm"
+                    />
+                  </div>
+
+                  {/* Blocked Warning Banner */}
+                  {isBlocked && (
+                    <div className="mt-2 px-2.5 py-1 rounded-xl bg-red-100/80 border border-red-300 flex items-center justify-between gap-1 text-red-900">
+                      <div className="flex items-center gap-1.5 text-xs font-bold">
+                        <Ban className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                        <span>ব্লকড / স্থগিত কাস্টমার (বাকি প্রদান সতর্ক থাকুন)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTagModalCustomer(customer);
+                        }}
+                        className="text-[10px] font-bold text-red-700 hover:text-red-950 underline shrink-0 cursor-pointer"
+                      >
+                        পরিবর্তন
+                      </button>
+                    </div>
                   )}
 
                   {/* Visual Progress / Ratio Meter */}
@@ -558,6 +747,19 @@ export const CustomerList: React.FC<CustomerListProps> = ({
                   </button>
 
                   <div className="flex items-center gap-1.5">
+                    {/* Tag Editor Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTagModalCustomer(customer);
+                      }}
+                      className="p-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 rounded-lg text-xs font-bold transition cursor-pointer border border-slate-200"
+                      title="কাস্টমার ট্যাগ বা ক্যাটাগরি সম্পাদনা করুন"
+                    >
+                      <Tag className="w-3.5 h-3.5" />
+                    </button>
+
                     {onViewStatement && (
                       <button
                         onClick={(e) => {
@@ -608,6 +810,16 @@ export const CustomerList: React.FC<CustomerListProps> = ({
           })
         )}
       </div>
+
+      {/* Customer Tag Management Modal */}
+      {tagModalCustomer && (
+        <CustomerTagModal
+          isOpen={Boolean(tagModalCustomer)}
+          customer={tagModalCustomer}
+          onClose={() => setTagModalCustomer(null)}
+          onSaveTags={handleSaveCustomerTags}
+        />
+      )}
 
     </div>
   );

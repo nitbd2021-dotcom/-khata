@@ -362,9 +362,7 @@ export const VoiceKhataModal: React.FC<VoiceKhataModalProps> = ({
                     <span className={`text-xs sm:text-sm font-black block mt-0.5 ${
                       customType === 'payment_received' ? 'text-emerald-700' : 'text-red-600'
                     }`}>
-                      {customType === 'payment_received' ? 'টাকা পেলাম (জমা)' :
-                       customType === 'credit_given' ? 'বাকি দিলাম' :
-                       customType === 'loan_given' ? 'ধার দিলাম' : 'বাকি নিলাম'}
+                      {customType === 'payment_received' ? 'টাকা পেলাম (জমা)' : 'বাকি দিলাম'}
                     </span>
                   </div>
                   <div>
@@ -414,11 +412,11 @@ export const VoiceKhataModal: React.FC<VoiceKhataModalProps> = ({
                   {/* Type buttons */}
                   <div>
                     <label className="text-[11px] font-bold text-slate-700 block mb-1">লেনদেনের ধরন</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => setCustomType('credit_given')}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        className={`py-2 px-2.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                           customType === 'credit_given'
                             ? 'bg-red-600 text-white shadow-xs'
                             : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
@@ -429,35 +427,13 @@ export const VoiceKhataModal: React.FC<VoiceKhataModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setCustomType('payment_received')}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        className={`py-2 px-2.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                           customType === 'payment_received'
                             ? 'bg-emerald-600 text-white shadow-xs'
                             : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
                         }`}
                       >
-                        টাকা পেলাম
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCustomType('loan_given')}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                          customType === 'loan_given'
-                            ? 'bg-indigo-600 text-white shadow-xs'
-                            : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
-                        }`}
-                      >
-                        ধার দিলাম
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCustomType('credit_taken')}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                          customType === 'credit_taken'
-                            ? 'bg-amber-600 text-white shadow-xs'
-                            : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
-                        }`}
-                      >
-                        বাকি নিলাম
+                        টাকা পেলাম (জমা)
                       </button>
                     </div>
                   </div>
@@ -531,7 +507,7 @@ export const VoiceKhataModal: React.FC<VoiceKhataModalProps> = ({
                 'A1001 রহিম ১০০০ টাকা দিল',
                 'রহিম ৫০০ টাকা বাকি নিল',
                 'A1002 করিম ৮০০ টাকা পরিশোধ করল',
-                'মো: সোহেল রানা ১২০০ টাকা ধার নিল'
+                'মো: সোহেল রানা ১২০০ টাকা বাকি নিল'
               ].map((sample, idx) => (
                 <button
                   key={idx}

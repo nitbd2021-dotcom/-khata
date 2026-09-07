@@ -63,7 +63,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   onSave,
   onAddCustomer,
 }) => {
-  const [type, setType] = useState<TransactionType>(initialType);
+  const normalizedInitialType = (initialType === 'loan_given' || initialType === 'credit_given')
+    ? 'credit_given'
+    : (initialType === 'payment_received' ? 'payment_received' : 'credit_given');
+  const [type, setType] = useState<TransactionType>(normalizedInitialType);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(initialCustomerId || '');
   const [amountStr, setAmountStr] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
@@ -202,7 +205,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (initialType) setType(initialType);
+    if (initialType) {
+      const norm = (initialType === 'loan_given' || initialType === 'credit_given')
+        ? 'credit_given'
+        : (initialType === 'payment_received' ? 'payment_received' : 'credit_given');
+      setType(norm);
+    }
     if (initialCustomerId === 'NEW_CUSTOMER') {
       setIsCreatingCustomer(true);
       setSelectedCustomerId('');
@@ -377,24 +385,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
               লেনদেনের ধরন নির্বাচন করুন
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
-                onClick={() => setType('payment_received')}
-                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 border cursor-pointer ${
-                  type === 'payment_received'
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <ArrowDownLeft className="w-4 h-4" />
-                <span>টাকা পেলাম</span>
-              </button>
-
-              <button
-                type="button"
+                id="tx-type-credit-given-btn"
                 onClick={() => setType('credit_given')}
-                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 border cursor-pointer ${
+                className={`py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 border cursor-pointer ${
                   type === 'credit_given'
                     ? 'bg-red-600 text-white border-red-600 shadow-xs'
                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -406,50 +402,16 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
               <button
                 type="button"
-                onClick={() => setType('credit_taken')}
-                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 border cursor-pointer ${
-                  type === 'credit_taken'
-                    ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                id="tx-type-payment-received-btn"
+                onClick={() => setType('payment_received')}
+                className={`py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 border cursor-pointer ${
+                  type === 'payment_received'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <span>বাকি নিলাম</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setType('loan_given')}
-                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 border cursor-pointer ${
-                  type === 'loan_given'
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <span>ধার দিলাম</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setType('loan_taken')}
-                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 border cursor-pointer ${
-                  type === 'loan_taken'
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <span>ধার পেলাম</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setType('payment_given')}
-                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-1 border cursor-pointer ${
-                  type === 'payment_given'
-                    ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <span>টাকা দিলাম</span>
+                <ArrowDownLeft className="w-4 h-4" />
+                <span>টাকা পেলাম (জমা)</span>
               </button>
             </div>
           </div>
@@ -745,7 +707,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
 
           {/* Product Inventory Stock Selector (For Credit Sales & Products) */}
-          {(type === 'credit_given' || type === 'sale' || type === 'loan_given') && (
+          {(type === 'credit_given' || type === 'sale') && (
             <div className="bg-emerald-50/50 border border-emerald-200/90 rounded-2xl p-3.5 space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
@@ -855,7 +817,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
 
           {/* Warning Banner if Customer Credit Limit will be exceeded */}
-          {selectedCustomer && (type === 'credit_given' || type === 'loan_given') && (() => {
+          {selectedCustomer && type === 'credit_given' && (() => {
             const hasCustLimit = typeof selectedCustomer.creditLimit === 'number' && selectedCustomer.creditLimit > 0;
             const lim = hasCustLimit ? selectedCustomer.creditLimit! : (user.dueThreshold ?? 2500);
             if (projectedBalance > lim) {

@@ -268,26 +268,6 @@ export const parseVoiceCommand = (
     type = 'payment_received';
     typeLabel = 'টাকা পেলাম (জমা)';
   } else if (
-    normalized.includes('ধার নিল') ||
-    normalized.includes('ধার দিলাম') ||
-    normalized.includes('করজ দিলাম')
-  ) {
-    type = 'loan_given';
-    typeLabel = 'ধার দিলাম';
-  } else if (
-    normalized.includes('ধার নিলাম') ||
-    normalized.includes('ধার পেলাম')
-  ) {
-    type = 'loan_taken';
-    typeLabel = 'ধার পেলাম';
-  } else if (
-    normalized.includes('বাকি নিলাম') ||
-    normalized.includes('বাকিতে আনলাম') ||
-    normalized.includes('বাকিতে কিনলাম')
-  ) {
-    type = 'credit_taken';
-    typeLabel = 'বাকি নিলাম';
-  } else if (
     normalized.includes('বিক্রি') ||
     normalized.includes('নগদ')
   ) {

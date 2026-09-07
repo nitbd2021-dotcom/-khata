@@ -916,6 +916,31 @@ export const StorageService = {
         c.code = `A${numStr}`;
         updated = true;
       }
+      // Ensure tags array exists for all customers
+      if (!c.tags || !Array.isArray(c.tags) || c.tags.length === 0) {
+        if (c.code === 'A1001' || c.name.includes('রহিম')) {
+          c.tags = ['regular', 'wholesale'];
+          updated = true;
+        } else if (c.code === 'A1002' || c.name.includes('করিম')) {
+          c.tags = ['wholesale'];
+          updated = true;
+        } else if (c.code === 'A1003' || c.name.includes('সোহেল')) {
+          c.tags = ['regular'];
+          updated = true;
+        } else if (c.code === 'A1004' || c.name.includes('সালমা')) {
+          c.tags = ['retail'];
+          updated = true;
+        } else if (c.code === 'A1111' || c.name.includes('রাজু')) {
+          c.tags = ['vip', 'regular'];
+          updated = true;
+        } else if (c.name.includes('জামাল') || c.name.includes('ডিস্ট্রিবিউশন')) {
+          c.tags = ['wholesale'];
+          updated = true;
+        } else {
+          c.tags = ['regular'];
+          updated = true;
+        }
+      }
     });
 
     if (updated) {
@@ -945,6 +970,19 @@ export const StorageService = {
       all.push(customer);
     }
     localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.stringify(all));
+  },
+
+  updateCustomerTags: (customerId: string, tags: string[]): boolean => {
+    const raw = localStorage.getItem(STORAGE_CUSTOMERS_KEY);
+    if (!raw) return false;
+    const all: Customer[] = JSON.parse(raw);
+    const idx = all.findIndex(c => c.id === customerId);
+    if (idx >= 0) {
+      all[idx].tags = tags;
+      localStorage.setItem(STORAGE_CUSTOMERS_KEY, JSON.stringify(all));
+      return true;
+    }
+    return false;
   },
 
   // Transactions
@@ -1041,6 +1079,104 @@ export const StorageService = {
     }
 
     return newTx;
+  },
+
+  // Recalculate running balanceAfter and customer totals from all transactions
+  recalculateCustomerLedger: (userId: string, customerId: string) => {
+    const customers = StorageService.getCustomers(userId);
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
+
+    const rawTxs = localStorage.getItem(STORAGE_TRANSACTIONS_KEY);
+    const allTxs: Transaction[] = rawTxs ? JSON.parse(rawTxs) : [];
+
+    // All transactions for this customer sorted chronologically ascending (oldest first)
+    const custTxs = allTxs
+      .filter(t => t.userId === userId && t.customerId === customerId)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let runningReceivable = 0;
+    let runningPayable = 0;
+
+    for (const t of custTxs) {
+      const numAmount = Math.max(0, Number(t.amount) || 0);
+      if (t.type === 'credit_given' || t.type === 'loan_given' || t.type === 'sale') {
+        runningReceivable += numAmount;
+      } else if (t.type === 'payment_received') {
+        runningReceivable = Math.max(0, runningReceivable - numAmount);
+      } else if (t.type === 'credit_taken' || t.type === 'loan_taken') {
+        runningPayable += numAmount;
+      } else if (t.type === 'payment_given') {
+        runningPayable = Math.max(0, runningPayable - numAmount);
+      }
+      t.balanceAfter = runningReceivable - runningPayable;
+    }
+
+    // Map back updated balanceAfter to allTxs
+    const updatedCustTxMap = new Map(custTxs.map(t => [t.id, t]));
+    const updatedAllTxs = allTxs.map(t => updatedCustTxMap.get(t.id) || t);
+    localStorage.setItem(STORAGE_TRANSACTIONS_KEY, JSON.stringify(updatedAllTxs));
+
+    // Update customer balances
+    customer.totalReceivable = runningReceivable;
+    customer.totalPayable = runningPayable;
+    customer.netBalance = runningReceivable - runningPayable;
+    const latestTx = custTxs[custTxs.length - 1];
+    customer.lastTransactionAt = latestTx ? latestTx.date : customer.createdAt;
+
+    StorageService.saveCustomer(customer);
+  },
+
+  // Update existing transaction and recalculate balances
+  updateTransaction: (
+    userId: string,
+    txId: string,
+    updates: {
+      amount?: number;
+      type?: TransactionType;
+      description?: string;
+      date?: string;
+      paymentMethod?: PaymentMethod | string;
+    }
+  ): Transaction => {
+    const rawTxs = localStorage.getItem(STORAGE_TRANSACTIONS_KEY);
+    const allTxs: Transaction[] = rawTxs ? JSON.parse(rawTxs) : [];
+    const txIndex = allTxs.findIndex(t => t.id === txId && t.userId === userId);
+    if (txIndex === -1) throw new Error('লেনদেন খুঁজে পাওয়া যায়নি');
+
+    const tx = allTxs[txIndex];
+    if (updates.amount !== undefined) tx.amount = Math.max(0, Number(updates.amount) || 0);
+    if (updates.type !== undefined) tx.type = updates.type;
+    if (updates.description !== undefined) tx.description = updates.description.trim() || getDefaultDescription(tx.type);
+    if (updates.date !== undefined) tx.date = updates.date;
+    if (updates.paymentMethod !== undefined) tx.paymentMethod = updates.paymentMethod as PaymentMethod;
+    tx.syncedToSheet = false; // Mark for re-sync
+
+    allTxs[txIndex] = tx;
+    localStorage.setItem(STORAGE_TRANSACTIONS_KEY, JSON.stringify(allTxs));
+
+    // Recalculate customer balance and ledger
+    StorageService.recalculateCustomerLedger(userId, tx.customerId);
+
+    const refreshed = StorageService.getTransactions(userId).find(t => t.id === txId);
+    return refreshed || tx;
+  },
+
+  // Delete transaction and recalculate balances
+  deleteTransaction: (userId: string, txId: string): { customerId: string } => {
+    const rawTxs = localStorage.getItem(STORAGE_TRANSACTIONS_KEY);
+    const allTxs: Transaction[] = rawTxs ? JSON.parse(rawTxs) : [];
+    const tx = allTxs.find(t => t.id === txId && t.userId === userId);
+    if (!tx) throw new Error('লেনদেন খুঁজে পাওয়া যায়নি');
+
+    const customerId = tx.customerId;
+    const remaining = allTxs.filter(t => !(t.id === txId && t.userId === userId));
+    localStorage.setItem(STORAGE_TRANSACTIONS_KEY, JSON.stringify(remaining));
+
+    // Recalculate customer balance and ledger
+    StorageService.recalculateCustomerLedger(userId, customerId);
+
+    return { customerId };
   },
 
   // Inventory (DSR Product Stock Tracking)

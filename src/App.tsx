@@ -279,6 +279,75 @@ export default function App() {
     triggerSync(currentUser);
   };
 
+  const handleEditTransaction = async (
+    tx: Transaction,
+    updates: {
+      amount?: number;
+      type?: TransactionType;
+      description?: string;
+      date?: string;
+      paymentMethod?: PaymentMethod | string;
+    }
+  ) => {
+    if (!currentUser) return;
+    try {
+      StorageService.updateTransaction(currentUser.id, tx.id, updates);
+      const updatedCustomers = StorageService.getCustomers(currentUser.id);
+      const updatedTransactions = StorageService.getTransactions(currentUser.id);
+      setCustomers(updatedCustomers);
+      setTransactions(updatedTransactions);
+
+      if (selectedCustomer) {
+        const freshCust = updatedCustomers.find(c => c.id === selectedCustomer.id);
+        if (freshCust) setSelectedCustomer(freshCust);
+      }
+
+      setSyncNotification({
+        message: 'লেনদেন আপডেট হয়েছে! স্বয়ংক্রিয়ভাবে গুগল শিটে সিঙ্ক হচ্ছে...',
+        type: 'info',
+      });
+
+      // Automatically trigger a re-sync with Google Sheets
+      await triggerSync(currentUser);
+    } catch (err: any) {
+      console.error('Failed to edit transaction:', err);
+      setSyncNotification({
+        message: err.message || 'লেনদেন আপডেট করতে সমস্যা হয়েছে',
+        type: 'warning',
+      });
+    }
+  };
+
+  const handleDeleteTransaction = async (txId: string) => {
+    if (!currentUser) return;
+    try {
+      StorageService.deleteTransaction(currentUser.id, txId);
+      const updatedCustomers = StorageService.getCustomers(currentUser.id);
+      const updatedTransactions = StorageService.getTransactions(currentUser.id);
+      setCustomers(updatedCustomers);
+      setTransactions(updatedTransactions);
+
+      if (selectedCustomer) {
+        const freshCust = updatedCustomers.find(c => c.id === selectedCustomer.id);
+        if (freshCust) setSelectedCustomer(freshCust);
+      }
+
+      setSyncNotification({
+        message: 'লেনদেন মুছে ফেলা হয়েছে! স্বয়ংক্রিয়ভাবে গুগল শিট আপডেট হচ্ছে...',
+        type: 'info',
+      });
+
+      // Automatically trigger a re-sync with Google Sheets
+      await triggerSync(currentUser);
+    } catch (err: any) {
+      console.error('Failed to delete transaction:', err);
+      setSyncNotification({
+        message: err.message || 'লেনদেন মুছতে সমস্যা হয়েছে',
+        type: 'warning',
+      });
+    }
+  };
+
   const handleViewReceipt = (transaction: Transaction, customer?: Customer) => {
     const cust = customer || customers.find(c => c.id === transaction.customerId);
     if (cust) {
@@ -501,6 +570,10 @@ export default function App() {
                     onViewQRCode={cust => setViewQrCustomer(cust)}
                     onViewStatement={cust => setStatementCustomer(cust)}
                     onOpenPhoneContacts={() => setIsPhoneContactModalOpen(true)}
+                    onCustomerUpdated={() => {
+                      const updated = StorageService.getCustomers(currentUser.id);
+                      setCustomers(updated);
+                    }}
                   />
                 )}
 
@@ -831,6 +904,8 @@ export default function App() {
             handleOpenAddTx(type, custId);
           }}
           onViewReceipt={(tx, cust) => handleViewReceipt(tx, cust)}
+          onEditTransaction={handleEditTransaction}
+          onDeleteTransaction={handleDeleteTransaction}
         />
       )}
 

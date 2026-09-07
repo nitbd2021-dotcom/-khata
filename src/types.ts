@@ -36,6 +36,8 @@ export interface User {
   dsrStatus?: 'active' | 'suspended'; // ডিএসআর একাউন্ট স্ট্যাটাস (সক্রিয় বা সাময়িক স্থগিত)
 }
 
+export type CustomerTagId = 'regular' | 'wholesale' | 'blocked' | 'vip' | 'retail' | string;
+
 export interface Customer {
   id: string;
   code?: string; // ৪/৫/৬ সংখ্যার ইউনিক আইডি কোড (যেমন: A1001, A1111, A10000)
@@ -44,6 +46,7 @@ export interface Customer {
   phone: string;
   address?: string;
   note?: string;
+  tags?: string[]; // কাস্টমার ক্যাটাগরি ও ট্যাগিং (যেমন: 'regular', 'wholesale', 'blocked', 'vip', 'retail')
   creditLimit?: number;    // মডারেটর কর্তৃক নির্ধারিত কাস্টমারের ব্যক্তিগত বাকি সীমা (Customer credit limit set by moderator)
   totalReceivable: number; // মোট পাওনা
   totalPayable: number;    // মোট দেনা

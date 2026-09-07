@@ -27,6 +27,7 @@ import { Customer, Expense, Transaction, User } from '../types';
 import { formatBanglaPaymentMethod, formatBanglaTxType, GoogleSheetsService } from '../services/googleSheetsService';
 import { DailyTransactionsBarChart } from './DailyTransactionsBarChart';
 import { MonthlyIncomeExpenseChart } from './MonthlyIncomeExpenseChart';
+import { ReportsCalendarView } from './ReportsCalendarView';
 
 interface ReportsViewProps {
   user: User;
@@ -51,6 +52,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 }) => {
   const [timeRange, setTimeRange] = useState<'today' | '7days' | 'month' | 'all' | 'custom'>('month');
   const [customMode, setCustomMode] = useState<'single' | 'range'>('single');
+  const [reportViewMode, setReportViewMode] = useState<'overview' | 'calendar'>('overview');
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<string>('');
 
   // Helper to convert Date to YYYY-MM-DD
   const toLocalYMD = (d: Date): string => {
@@ -250,7 +253,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   return (
     <div className="space-y-6 pb-24 md:pb-12">
       
-      {/* Header with Preset & Calendar Tabs */}
+      {/* Header with Sub-tab Switcher & Preset Tabs */}
       <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -264,6 +267,39 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* View Mode Switcher: Overview vs Calendar */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl border border-slate-200 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setReportViewMode('overview')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  reportViewMode === 'overview'
+                    ? 'bg-white text-emerald-800 shadow-xs ring-1 ring-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>রিপোর্ট ও চার্ট</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportViewMode('calendar')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  reportViewMode === 'calendar'
+                    ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-400/30'
+                    : 'text-slate-600 hover:text-indigo-600'
+                }`}
+              >
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span>ক্যালেন্ডার ভিউ</span>
+                <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  reportViewMode === 'calendar' ? 'bg-indigo-700 text-white' : 'bg-indigo-100 text-indigo-700'
+                }`}>
+                  লাইভ
+                </span>
+              </button>
+            </div>
+
             <button
               onClick={handleDownloadCsv}
               className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 shadow-2xs"
@@ -275,63 +311,97 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
         </div>
 
-        {/* Time range pills (Including Calendar / Custom Date) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-t border-slate-100 pt-3">
-          <button
-            onClick={() => setTimeRange('today')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
-              timeRange === 'today'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            আজ
-          </button>
-          <button
-            onClick={() => setTimeRange('7days')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
-              timeRange === '7days'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            ৭ দিন
-          </button>
-          <button
-            onClick={() => setTimeRange('month')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
-              timeRange === 'month'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            চলতি মাস
-          </button>
-          <button
-            onClick={() => setTimeRange('all')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
-              timeRange === 'all'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            সব সময়
-          </button>
-          <button
-            onClick={() => {
-              setTimeRange('custom');
-            }}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
-              timeRange === 'custom'
-                ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-400/30'
-                : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
-            }`}
-          >
-            <CalendarRange className="w-3.5 h-3.5" />
-            <span>ক্যালেন্ডার / কাস্টম তারিখ</span>
-          </button>
-        </div>
+        {/* Time range pills (Shown when in overview mode) */}
+        {reportViewMode === 'overview' && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-t border-slate-100 pt-3">
+            <button
+              onClick={() => setTimeRange('today')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                timeRange === 'today'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              আজ
+            </button>
+            <button
+              onClick={() => setTimeRange('7days')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                timeRange === '7days'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              ৭ দিন
+            </button>
+            <button
+              onClick={() => setTimeRange('month')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                timeRange === 'month'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              চলতি মাস
+            </button>
+            <button
+              onClick={() => setTimeRange('all')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                timeRange === 'all'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              সব সময়
+            </button>
+            <button
+              onClick={() => {
+                setTimeRange('custom');
+              }}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                timeRange === 'custom'
+                  ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-400/30'
+                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+              }`}
+            >
+              <CalendarRange className="w-3.5 h-3.5" />
+              <span>কাস্টম তারিখ ফিল্টার</span>
+            </button>
+
+            {/* Quick Button to Switch to Calendar View */}
+            <button
+              type="button"
+              onClick={() => setReportViewMode('calendar')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 text-indigo-700 border border-indigo-200 ml-auto"
+            >
+              <CalendarDays className="w-3.5 h-3.5 text-indigo-600" />
+              <span>ক্যালেন্ডার ভিউ খুলুন</span>
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Render Calendar View or Overview View */}
+      {reportViewMode === 'calendar' ? (
+        <ReportsCalendarView
+          user={user}
+          customers={customers}
+          transactions={transactions}
+          expenses={expenses}
+          onAddExpense={onAddExpense}
+          onViewReceipt={onViewReceipt}
+          initialSelectedDate={calendarSelectedDate || (timeRange === 'custom' ? startDate : todayStr)}
+          onSelectDateForFilter={(clickedYMD) => {
+            setCalendarSelectedDate(clickedYMD);
+            setReportViewMode('overview');
+            setTimeRange('custom');
+            setCustomMode('single');
+            setStartDate(clickedYMD);
+            setEndDate(clickedYMD);
+          }}
+        />
+      ) : (
+        <>
 
       {/* Interactive Calendar Date Picker Panel (When custom is active) */}
       {timeRange === 'custom' && (
@@ -399,6 +469,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                     }}
                     className="bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none flex-1"
                   />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalendarSelectedDate(startDate);
+                      setReportViewMode('calendar');
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 shadow-2xs"
+                    title="মাসিক ভিজ্যুয়াল ক্যালেন্ডার ও দিনভিত্তিক লেজার সারাংশ দেখুন"
+                  >
+                    <CalendarDays className="w-4 h-4 text-indigo-600" />
+                    <span>ভিজ্যুয়াল ক্যালেন্ডার গ্রিডে দেখুন</span>
+                  </button>
                   <div className="text-xs font-bold text-indigo-900 bg-indigo-50 px-3 py-2.5 rounded-xl border border-indigo-200 text-center sm:text-left">
                     নির্বাচিত দিন: {formatBanglaDate(startDate)}
                   </div>
@@ -1121,6 +1203,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
 
       </div>
+
+        </>
+      )}
 
     </div>
   );
